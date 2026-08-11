@@ -100,3 +100,6 @@ runtime/
 
 # Backlot local cache (thumbnails)
 .backlot/
+
+# Isolated Codex implementation worktrees
+.worktrees/
