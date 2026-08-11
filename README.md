@@ -691,8 +691,9 @@ After placing the required executables, Python environment, and model artifacts 
 
 ```powershell
 .\scripts\setup_local_agent.ps1 -CreateProfile
-.\scripts\start_local_agent.ps1
 ```
+
+Then launch by double-clicking `START_OFFLINE_EDITOR.bat` in the repository root. The BAT file changes to the repository directory automatically, runs the strict offline preflight, and opens the local Codex/Ollama editing agent. It never installs or downloads anything. The PowerShell equivalent is `.\scripts\start_local_agent.ps1`.
 
 The scripts never install or download dependencies. See [`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for complete Russian-language workflows and editing prompts.
 

@@ -14,6 +14,18 @@ def test_launcher_enables_fail_closed_offline_mode():
         assert forbidden not in text.lower()
 
 
+def test_batch_launcher_delegates_to_offline_powershell_launcher():
+    text = (ROOT / "START_OFFLINE_EDITOR.bat").read_text(encoding="utf-8")
+    lowered = text.lower()
+    assert 'cd /d "%~dp0"' in lowered
+    assert 'scripts\\start_local_agent.ps1' in lowered
+    assert "powershell.exe -nologo -noprofile -executionpolicy bypass" in lowered
+    for forbidden in [
+        "invoke-webrequest", "curl", "winget", "npm install", "pip install", "ollama pull",
+    ]:
+        assert forbidden not in lowered
+
+
 def test_setup_never_downloads():
     text = (ROOT / "scripts" / "setup_local_agent.ps1").read_text(encoding="utf-8")
     for forbidden in ["invoke-webrequest", "curl", "winget", "npm install", "pip install", "ollama pull"]:
