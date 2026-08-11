@@ -62,11 +62,6 @@ jobs:
           yarn --version
           yarn config set -H enableImmutableInstalls false
 
-      - name: Test portable runtime patch
-        shell: pwsh
-        working-directory: .jan-source/src-tauri
-        run: cargo test --lib portable
-
       - name: Build Jan
         shell: bash
         working-directory: .jan-source
@@ -74,6 +69,11 @@ jobs:
           IS_CLEAN: "true"
           CI: "true"
         run: make build
+
+      - name: Test portable runtime patch
+        shell: pwsh
+        working-directory: .jan-source/src-tauri
+        run: cargo test --release --lib portable
 
       - name: Package portable executable
         shell: pwsh
