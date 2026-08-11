@@ -13,8 +13,8 @@ from typing import Callable
 from lib.providers.ollama import OllamaClient, OllamaError
 
 
-COMMANDS = ("ollama", "codex", "ffmpeg", "ffprobe")
-MODELS = ("gpt-oss:20b", "qwen3.5:9b", "openmontage-gpt-oss:20b-32k")
+COMMANDS = ("ollama", "ffmpeg", "ffprobe")
+MODELS = ("qwen3.5:9b", "openmontage-gpt-oss:20b-32k")
 
 
 def _probe_command(command: str) -> bool:

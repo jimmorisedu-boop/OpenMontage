@@ -95,5 +95,8 @@ remotion-composer/public/demo-props/caption-burn-*
 venv/
 .venv/
 
+# Portable local AI runtime and model weights
+runtime/
+
 # Backlot local cache (thumbnails)
 .backlot/

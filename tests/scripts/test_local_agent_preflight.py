@@ -3,7 +3,7 @@ from scripts.local_agent_preflight import run_preflight
 
 class FakeClient:
     def health(self): return True
-    def list_models(self): return {"gpt-oss:20b", "qwen3.5:9b", "openmontage-gpt-oss:20b-32k"}
+    def list_models(self): return {"qwen3.5:9b", "openmontage-gpt-oss:20b-32k"}
     def model_num_ctx(self, tag): return 32768
 
 
@@ -11,7 +11,12 @@ def test_preflight_passes_with_local_runtime(tmp_path):
     python = tmp_path / ".venv" / "Scripts" / "python.exe"
     python.parent.mkdir(parents=True)
     python.write_bytes(b"")
-    report = run_preflight(tmp_path, client=FakeClient(), which=lambda command: f"C:/{command}.exe", probe=lambda command: True)
+    report = run_preflight(
+        tmp_path,
+        client=FakeClient(),
+        which=lambda command: None if command == "codex" else f"C:/{command}.exe",
+        probe=lambda command: True,
+    )
     assert report.ok
     assert report.actions == []
 

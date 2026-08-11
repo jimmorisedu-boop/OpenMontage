@@ -44,10 +44,12 @@ class OllamaClient:
         self.timeout_seconds = timeout_seconds
         if os.environ.get("OPENMONTAGE_OFFLINE", "1") == "1" and not _is_loopback_url(self.base_url):
             raise OllamaConnectionError(f"Offline mode rejects non-loopback Ollama endpoint: {self.base_url}")
+        self._session = requests.Session()
+        self._session.trust_env = False
 
     def _get(self, path: str) -> dict[str, Any]:
         try:
-            response = requests.get(f"{self.base_url}{path}", timeout=self.timeout_seconds)
+            response = self._session.get(f"{self.base_url}{path}", timeout=self.timeout_seconds)
             response.raise_for_status()
             return response.json()
         except (requests.RequestException, ValueError) as exc:
@@ -55,7 +57,7 @@ class OllamaClient:
 
     def _post(self, path: str, payload: dict[str, Any]) -> dict[str, Any]:
         try:
-            response = requests.post(
+            response = self._session.post(
                 f"{self.base_url}{path}", json=payload, timeout=self.timeout_seconds
             )
             if response.status_code == 404 and "model" in response.text.lower():

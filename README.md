@@ -685,17 +685,17 @@ All platform files point to the shared `AGENT_GUIDE.md` (operating guide and age
 
 ### Fully offline text editing
 
-OpenMontage can edit supplied local footage with a local Codex CLI/Ollama agent. The offline profile uses `gpt-oss:20b` for orchestration and `qwen3.5:9b` for bounded semantic review of sampled frames. It blocks URL inputs, remote Ollama endpoints, API/HYBRID tools, cloud fallbacks, web search, downloads, publishing, and package-resolving render paths; strict offline composition uses FFmpeg.
+OpenMontage can edit supplied local footage with Codex Desktop connected to a repository-local Ollama runtime. The fixed profile uses `openmontage-gpt-oss:20b-32k` for orchestration and `qwen3.5:9b` for bounded semantic review of sampled frames. It blocks URL inputs, remote Ollama endpoints, API/HYBRID tools, cloud fallbacks, web search, downloads, publishing, and package-resolving render paths; strict offline composition uses FFmpeg.
 
-After placing the required executables, Python environment, and model artifacts on the machine through approved offline media:
+One-time portable setup (requires network access only while downloading the runtime and fixed model artifacts):
 
-```powershell
-.\scripts\setup_local_agent.ps1 -CreateProfile
-```
+1. Double-click `SETUP_PORTABLE_RUNTIME.bat`.
+2. Wait for the standalone Ollama runtime, `gpt-oss:20b`, and `qwen3.5:9b` to finish downloading.
+3. Double-click `START_OFFLINE_EDITOR.bat` for every normal editing session.
 
-Then launch by double-clicking `START_OFFLINE_EDITOR.bat` in the repository root. The BAT file changes to the repository directory automatically, runs the strict offline preflight, and opens the local Codex/Ollama editing agent. It never installs or downloads anything. The PowerShell equivalent is `.\scripts\start_local_agent.ps1`.
+The setup stores standalone Ollama, FFmpeg/ffprobe copies, logs, and approximately 19 GB of model weights below the ignored `runtime/` directory. It fixes the Codex Desktop model to `openmontage-gpt-oss:20b-32k`; `qwen3.5:9b` is reserved for sampled-frame review. The source `gpt-oss:20b` tag is removed after the 32K profile is created, so the local model menu contains only the two working entries and no duplicate weights.
 
-The scripts never install or download dependencies. See [`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for complete Russian-language workflows and editing prompts.
+`START_OFFLINE_EDITOR.bat` never installs or downloads anything. It starts repository-local Ollama on `127.0.0.1`, disables Ollama Cloud, runs strict offline preflight, and opens the existing Codex Desktop app with the fixed model. See [`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for complete Russian-language workflows and editing prompts.
 
 ---
 
