@@ -220,6 +220,32 @@ prohibits destructive source edits, mid-word cuts, clipped phonemes, silent
 story changes, unsupported generated assets, and unverifiable claims about
 what is visible in the footage.
 
+The practical method is grounded in five editing texts, used through original
+paraphrase and attribution rather than copied passages:
+
+- Walter Murch, *In the Blink of an Eye*: rank emotion, story, and rhythm above
+  lower-order continuity when the criteria conflict; treat a cut as a change in
+  thought or attention, not merely a mechanical join.
+- Karen Pearlman, *Cutting Rhythms*: shape timing, pacing, and movement
+  trajectories into cycles of tension and release; judge rhythm as embodied
+  audience experience rather than average shot length alone.
+- Karel Reisz and Gavin Millar, *The Technique of Film Editing*: choose technique
+  from the dramatic function of the scene and test it against concrete material,
+  with distinct guidance for dialogue, action, documentary, and montage.
+- Edward Dmytryk, *On Film Editing*: require a positive reason for a cut, protect
+  performance and reaction, and prefer meaning and usable screen values over a
+  cosmetically smooth but dramatically wrong match.
+- Michael Ondaatje, *The Conversations: Walter Murch and the Art of Editing Film*:
+  treat editing as iterative discovery and collaboration across image, speech,
+  music, and sound; compare versions through repeated whole-piece viewing.
+
+`skills/creative/video-editing.md` remains a concise imperative workflow. A
+separate `skills/creative/references/editorial-principles.md` records the
+attributed principles, operational questions, conflict-resolution order, and
+bibliography. The handbook translates the same method into plain-language
+questions a user can put in an editing request. Neither document reproduces
+long quotations or substitutes for the books.
+
 ## GPU Lifecycle
 
 The 16 GB GPU is treated as a single-model resource.
@@ -331,7 +357,10 @@ The MVP is complete when:
 9. a new user can follow the local editing handbook from source-file placement
    to approved render without reading repository architecture documentation;
 10. every source-led edit director routes agents through the shared editorial
-    playbook, and contract tests verify the required workflow and QA sections.
+    playbook, and contract tests verify the required workflow and QA sections;
+11. the handbook and agent guidance attribute all five requested works, convert
+    their principles into executable editorial checks, and contain no extended
+    quotations or unsupported claims of page-level fidelity.
 
 ## Future Extensions
 

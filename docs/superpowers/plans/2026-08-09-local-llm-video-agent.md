@@ -1408,6 +1408,7 @@ git commit -m "docs: add local two-model agent workflow"
 **Files:**
 - Create: `docs/LOCAL_TEXT_EDITING_GUIDE.md`
 - Replace: `skills/creative/video-editing.md`
+- Create: `skills/creative/references/editorial-principles.md`
 - Modify: `skills/pipelines/talking-head/edit-director.md`
 - Modify: `skills/pipelines/clip-factory/edit-director.md`
 - Modify: `skills/pipelines/hybrid/edit-director.md`
@@ -1421,6 +1422,7 @@ git commit -m "docs: add local two-model agent workflow"
 - Produces: a standalone operator path from source footage to approved local render.
 - Produces: copyable request templates for seven source-led workflows and revisions.
 - Produces: one shared editorial algorithm that every source-led edit director must read before writing `edit_decisions`.
+- Produces: an attributed, paraphrased reference layer based on Murch, Pearlman, Reisz/Millar, Dmytryk, and Ondaatje, without reproducing protected text.
 - Consumes: transcript, silence analysis, scene boundaries, deterministic quality metrics, and `ollama_vision_review` evidence.
 
 - [ ] **Step 1: Write handbook and playbook contract tests**
@@ -1466,6 +1468,27 @@ def test_agent_playbook_contains_evidence_cut_audio_and_qa_contracts():
         assert phrase in text
 
 
+def test_editorial_method_attributes_requested_books_and_is_routed_from_playbook():
+    playbook = (ROOT / "skills" / "creative" / "video-editing.md").read_text(encoding="utf-8")
+    reference = (ROOT / "skills" / "creative" / "references" / "editorial-principles.md").read_text(encoding="utf-8")
+    handbook = (ROOT / "docs" / "LOCAL_TEXT_EDITING_GUIDE.md").read_text(encoding="utf-8")
+    assert "skills/creative/references/editorial-principles.md" in playbook
+    for phrase in [
+        "Walter Murch", "In the Blink of an Eye", "Karen Pearlman",
+        "Cutting Rhythms", "Karel Reisz", "Gavin Millar",
+        "The Technique of Film Editing", "Edward Dmytryk", "On Film Editing",
+        "Michael Ondaatje", "The Conversations",
+    ]:
+        assert phrase in reference
+    for concept in [
+        "emotion", "story", "rhythm", "eye trace", "timing", "pacing",
+        "trajectory", "tension", "release", "positive reason", "reaction",
+        "dramatic function", "whole-piece viewing",
+    ]:
+        assert concept in reference.lower()
+    assert "## How editorial decisions are made" in handbook
+
+
 def test_source_led_edit_directors_route_through_shared_playbook():
     for pipeline in PIPELINES:
         text = (ROOT / "skills" / "pipelines" / pipeline / "edit-director.md").read_text(encoding="utf-8")
@@ -1496,6 +1519,7 @@ Create `docs/LOCAL_TEXT_EDITING_GUIDE.md` with this exact top-level flow:
 ## Start the agent
 ## Write an effective editing request
 ## How the local edit works
+## How editorial decisions are made
 ## Review and approve the edit
 ## Complete examples
 ### Talking-head cleanup
@@ -1542,10 +1566,20 @@ Each complete example must contain a realistic request, the pipeline it maps to,
 what the agent will inspect, the approval the user will see, and the expected
 deliverable. Do not include an example that depends on an excluded optional stack.
 
+In `How editorial decisions are made`, explain the method without assuming film
+school vocabulary: preserve the intended feeling and meaning first; cut only for
+a positive reason; shape timing, pacing, movement, tension, and release; protect
+reactions and necessary context; and review the complete piece after local fixes.
+Attribute the five books by author and title, link to the bibliography in
+`skills/creative/references/editorial-principles.md`, and state that the guide
+paraphrases principles rather than reproducing the books.
+
 - [ ] **Step 4: Replace the shared agent playbook with an evidence-driven workflow**
 
 Keep `skills/creative/video-editing.md` below 500 lines and use imperative
-instructions. Include these rules verbatim or equivalently:
+instructions. At the top, require the agent to read
+`skills/creative/references/editorial-principles.md` before consequential edit
+decisions. Include these rules verbatim or equivalently:
 
 ```markdown
 ## Editorial contract
@@ -1601,7 +1635,57 @@ segments, source paths, in/out timecodes, rationale/evidence, speed, transitions
 reframes, overlays, subtitles, audio treatment, warnings, QA results, and
 approval state.
 
-- [ ] **Step 5: Route every source-led edit director through the playbook**
+- [ ] **Step 5: Write the attributed editorial-principles reference**
+
+Create `skills/creative/references/editorial-principles.md`. Keep it practical,
+originally worded, and source-aware. Do not quote passages or reconstruct any
+book chapter-by-chapter. For each work, provide:
+
+1. the principle in a short paraphrase;
+2. questions the agent must ask while reviewing footage;
+3. how the principle changes `edit_decisions`;
+4. failure modes and when another principle has priority.
+
+Use this operational synthesis:
+
+- Murch: evaluate candidate cuts in the order emotion, story, rhythm, eye trace,
+  two-dimensional screen continuity, and three-dimensional spatial continuity;
+  use the order to resolve conflicts, not as a numeric scoring formula. Look for
+  thought/attention changes as candidate cut points.
+- Pearlman: distinguish timing (when an event or cut occurs), pacing (the rate
+  and density of events), and trajectory phrasing (how movement and energy develop
+  across shots). Diagnose tension/release and physical, emotional, and event rhythm.
+- Reisz/Millar: name the dramatic function of every scene and sequence before
+  selecting a technique. Adapt the method to dialogue, action, documentary,
+  montage, and sound rather than enforcing one universal cut pattern.
+- Dmytryk: record the positive reason for every consequential cut; preserve the
+  strongest performance and meaningful reaction; when smoothness conflicts with
+  meaning, make the dramatically right cut and repair mechanics afterward.
+- Ondaatje/Murch: edit by making and comparing versions, reviewing the whole
+  piece after local changes, and treating picture, dialogue, music, and sound as
+  one collaborative construction.
+
+End with a decision checklist and a bibliography linking to authoritative public
+descriptions: Silman-James Press for Murch; Routledge/Taylor & Francis for
+Pearlman and Dmytryk; Focal Press/Google Books metadata for Reisz and Millar; and
+Penguin Random House for Ondaatje. Clearly label any cross-book synthesis as the
+OpenMontage operational interpretation.
+
+Use these public source anchors during implementation, and cite the edition
+actually consulted:
+
+- Murch: `https://www.silmanjamespress.com/shop/filmmaking-directing/in-the-blink-of-an-eye2nd-edition/`
+- Pearlman: `https://www.routledge.com/Cutting-Rhythms-Creative-Film-Editing/Pearlman/p/book/9781041024088`
+  and `https://www.taylorfrancis.com/chapters/mono/10.4324/9781003619604-4/timing-pacing-trajectory-phrasing-karen-pearlman`
+- Reisz/Millar: `https://books.google.com/books/about/The_Technique_of_Film_Editing.html?id=heW7nNFD8i4C`
+- Dmytryk: `https://www.routledge.com/On-Film-Editing-An-Introduction-to-the-Art-of-Film-Construction/Dmytryk/p/book/9781138584327`
+- Ondaatje: `https://www.penguinrandomhouse.com/books/124596/the-conversations-by-michael-ondaatje/`
+
+Public descriptions and previews are sufficient for the high-level principles
+above. Do not claim exhaustive or page-specific coverage unless the user supplies
+the relevant edition or excerpts for local consultation.
+
+- [ ] **Step 6: Route every source-led edit director through the playbook**
 
 Near the beginning of each of the seven `edit-director.md` files, add:
 
@@ -1617,7 +1701,7 @@ the edit as degraded instead of inventing support.
 
 Do not alter existing pipeline-specific approval gates or canonical artifact names.
 
-- [ ] **Step 6: Run guidance contracts and affected pipeline tests**
+- [ ] **Step 7: Run guidance contracts and affected pipeline tests**
 
 Run:
 
@@ -1627,10 +1711,10 @@ Run:
 
 Expected: all guidance contracts and global schema/manifest checks pass.
 
-- [ ] **Step 7: Commit Task 7**
+- [ ] **Step 8: Commit Task 7**
 
 ```powershell
-git add docs/LOCAL_TEXT_EDITING_GUIDE.md skills/creative/video-editing.md skills/pipelines tests/contracts/test_local_editing_guidance.py
+git add docs/LOCAL_TEXT_EDITING_GUIDE.md skills/creative/video-editing.md skills/creative/references/editorial-principles.md skills/pipelines tests/contracts/test_local_editing_guidance.py
 git commit -m "docs: add local editorial handbook and playbook"
 ```
 
