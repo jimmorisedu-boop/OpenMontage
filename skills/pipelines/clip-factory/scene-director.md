@@ -13,6 +13,10 @@ You are planning how each selected clip will be framed and packaged for its dest
 | Tools | `frame_sampler`, `scene_detect` | Visual checks and boundary inspection |
 | Playbook | Active style playbook | Layout language and safe zones |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Rank candidate hooks, reject visually repetitive clips, and verify clean visual boundaries. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### 1. Choose The Right Frame For Each Clip

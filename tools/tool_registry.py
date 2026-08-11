@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 import inspect
+import os
 import pkgutil
 from types import ModuleType
 from typing import Any, Optional
@@ -269,6 +270,14 @@ class ToolRegistry:
 
         # Skip selectors — they aggregate, they aren't providers themselves
         tools = [t for t in self._tools.values() if t.provider != "selector"]
+        if os.environ.get("OPENMONTAGE_OFFLINE") == "1":
+            tools = [
+                t for t in tools
+                if t.runtime.value not in {"api", "hybrid"}
+                and not t.resource_profile.network_required
+                and t.provider not in {"hyperframes"}
+                and t.get_status() == ToolStatus.AVAILABLE
+            ]
 
         for tool in tools:
             cap = tool.capability
@@ -457,6 +466,7 @@ class ToolRegistry:
                     )
 
         result = {
+            "offline_mode": os.environ.get("OPENMONTAGE_OFFLINE") == "1",
             "composition_runtimes": comp_runtimes,
             "capabilities": capabilities,
             "setup_offers": setup_offers,

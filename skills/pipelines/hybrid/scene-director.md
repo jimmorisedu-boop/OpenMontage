@@ -13,6 +13,10 @@ You are translating the hybrid structure into a visual system that keeps the sou
 | Tools | `frame_sampler`, `scene_detect` | Optional source inspection |
 | Playbook | Active style playbook | Layout consistency |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Verify source/support alignment and crop risks using supplied media only. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### 1. Keep The Anchor Medium Visible

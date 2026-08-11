@@ -1,7 +1,7 @@
 ---
 name: video-understand
 description: |
-  Understand video content locally using ffmpeg frame extraction and Whisper transcription. No API keys needed.
+  Understand video content fully offline using ffmpeg frame extraction, local transcription, and local Ollama semantic frame review. No URLs, API keys, or network providers.
   Use when: (1) Understanding what a video contains, (2) Transcribing video audio locally,
   (3) Extracting key frames for visual analysis, (4) Getting video content without API keys.
 ---
@@ -10,10 +10,18 @@ description: |
 
 Understand video content locally using ffmpeg for frame extraction and Whisper for transcription. Fully offline, no API keys required.
 
+## Offline contract
+
+- Accept local paths only. Reject URLs and remote media.
+- Use only software and model artifacts already present on disk.
+- Never install, download, search, or call a cloud provider during production.
+- Keep deterministic measurements out of the vision-model prompt.
+
 ## Prerequisites
 
-- `ffmpeg` + `ffprobe` (required): `brew install ffmpeg`
-- `openai-whisper` (optional, for transcription): `pip install openai-whisper`
+- locally installed `ffmpeg` and `ffprobe` (required)
+- locally installed transcription model (optional)
+- local Ollama with `qwen3.5:9b` (optional semantic review)
 
 ## Commands
 
@@ -87,7 +95,17 @@ The script outputs JSON to stdout (or file with `-o`). See `references/output-fo
 }
 ```
 
-Use the Read tool on frame image paths to visually inspect extracted frames.
+Use the local frame paths for visual inspection.
+
+## Semantic frame review with Ollama
+
+1. Extract representative frames first; never submit a complete video.
+2. Submit one to three frames per scene and at most 20 images per request.
+3. Call `ollama_vision_review` with `qwen3.5:9b`, structured JSON output, and an 8192-token context.
+4. Preserve timestamps and scene IDs exactly.
+5. Set `keep_alive: 0` and unload the model after every batch.
+6. Store the result under `projects/<project-id>/artifacts/`.
+7. Mark unavailable evidence degraded; never switch to a remote model.
 
 ## References
 

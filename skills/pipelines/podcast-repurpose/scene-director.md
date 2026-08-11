@@ -13,6 +13,10 @@ You are deciding how each podcast deliverable should look based on the actual so
 | Tools | `frame_sampler` | Optional visual inspection for video-podcast sources |
 | Playbook | Active style playbook | Brand consistency |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Rank speaker reactions and verify active-speaker framing. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### 1. Pick The Right Treatment Per Deliverable

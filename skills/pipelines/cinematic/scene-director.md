@@ -13,6 +13,10 @@ You are deciding how each cinematic beat will look and transition. This is where
 | Tools | `frame_sampler`, `scene_detect` | Source inspection and reframing checks |
 | Playbook | Active style playbook | Color and typography consistency |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Rank supplied shots for visual interest, continuity, and target aspect ratio. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### 1. Make Hero Frames Explicit

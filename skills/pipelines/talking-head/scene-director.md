@@ -16,6 +16,10 @@ You are not just a processor. You are a creative director. Your job is to figure
 | Tools | `face_tracker` (optional) | Analyze speaker face position for reframing |
 | Tools | `silence_cutter` (optional) | Detect silence for jump cut planning |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Use the result to select expressive frames, detect closed eyes or obstruction, and evaluate face-preserving 9:16 crops. Store evidence under `projects/<project-id>/artifacts/`. If it is unavailable, mark visual understanding degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### Step 0: Footage Analysis

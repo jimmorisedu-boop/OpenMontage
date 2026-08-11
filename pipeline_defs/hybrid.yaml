@@ -96,9 +96,11 @@ stages:
       - scene_plan
     optional_tools:
       - frame_sampler
+      - ollama_vision_review
       - scene_detect
     tools_available:
       - frame_sampler
+      - ollama_vision_review
       - scene_detect
     checkpoint_required: true
     human_approval_default: true

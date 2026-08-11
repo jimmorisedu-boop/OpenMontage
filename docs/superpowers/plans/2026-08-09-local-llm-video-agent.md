@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add a Windows-first, fully local OpenMontage workflow using Codex CLI with `gpt-oss:20b` for orchestration and Ollama-hosted `qwen3.5:9b` for schema-validated frame review.
+**Goal:** Add a Windows-first, air-gapped OpenMontage workflow using Codex CLI with `gpt-oss:20b` for orchestration and loopback-only Ollama-hosted `qwen3.5:9b` for schema-validated frame review.
 
 **Architecture:** Codex CLI remains the ready-made agent shell and follows the repository's existing agent-first contracts. A focused Ollama HTTP client and `BaseTool` visual provider add frame understanding without creating a second orchestrator, while an opt-in GPU guard ensures Ollama models are unloaded before non-Ollama local GPU tools run.
 
@@ -17,6 +17,10 @@
 - Orchestrator, vision, and local generation models must be resident sequentially, never concurrently.
 - Visual requests contain at most 20 frames; normal scene-guided use is one to three frames per scene.
 - No cloud LLM fallback, automatic model download, global approval bypass, or silent provider substitution.
+- No web search, URL ingestion, media download, publishing, remote Ollama host,
+  network-assisted setup, or execution of API/HYBRID/network-required tools.
+- Strict offline composition uses FFmpeg; do not invoke npm/npx/Remotion/
+  HyperFrames or any project that can resolve web fonts, CDN scripts, or registries.
 - Do not install ComfyUI/WAN, Piper, ACE-Step, Real-ESRGAN, CodeFormer, rembg, Wav2Lip, SadTalker, or another optional generation/enhancement stack.
 - Every generated artifact path is explicitly under `projects/<project-id>/`.
 - Preserve the user's existing `remotion-composer/package-lock.json` modification.
@@ -1059,8 +1063,8 @@ def test_preflight_reports_every_actionable_gap(tmp_path):
     assert not report.ok
     assert set(report.missing_commands) == {"ollama", "codex", "ffmpeg", "ffprobe"}
     assert "Start Ollama" in "\n".join(report.actions)
-    assert "ollama pull gpt-oss:20b" in report.actions
-    assert "ollama pull qwen3.5:9b" in report.actions
+    assert "offline" in "\n".join(report.actions).lower()
+    assert "ollama pull" not in "\n".join(report.actions).lower()
 ```
 
 - [ ] **Step 2: Run the test and verify the preflight module is missing**
@@ -1112,12 +1116,9 @@ def run_preflight(root: Path, *, client: OllamaClient | None = None, which: Call
     profile_context_length = ollama.model_num_ctx("openmontage-gpt-oss:20b-32k") if online and "openmontage-gpt-oss:20b-32k" in installed else None
     venv = root / ".venv" / "Scripts" / "python.exe"
     actions = []
-    if "ollama" in missing_commands: actions.append("Install Ollama: winget install Ollama.Ollama")
-    if "codex" in missing_commands: actions.append("Install Codex CLI: npm install -g @openai/codex")
-    if "ffmpeg" in missing_commands or "ffprobe" in missing_commands: actions.append("Install FFmpeg and ensure ffmpeg/ffprobe are on PATH")
+    if missing_commands: actions.append("Copy missing executables from approved offline installation media: " + ", ".join(missing_commands))
     if not online: actions.append("Start Ollama and verify http://127.0.0.1:11434/api/tags")
-    if "gpt-oss:20b" in missing_models: actions.append("ollama pull gpt-oss:20b")
-    if "qwen3.5:9b" in missing_models: actions.append("ollama pull qwen3.5:9b")
+    if missing_models: actions.append("Import missing model artifacts from approved offline media: " + ", ".join(missing_models))
     if "openmontage-gpt-oss:20b-32k" in missing_models: actions.append("Run scripts\\setup_local_agent.ps1 -CreateProfile")
     elif profile_context_length != 32768: actions.append("Recreate the 32K profile: scripts\\setup_local_agent.ps1 -CreateProfile")
     if not venv.is_file(): actions.append("Create the repository .venv and install requirements.txt")
@@ -1154,27 +1155,18 @@ FROM gpt-oss:20b
 PARAMETER num_ctx 32768
 ```
 
-The derived tag reuses the downloaded base weights; it exists so Codex reloads the model with the same bounded context after every vision-model swap.
+The derived tag reuses the locally imported base weights; it exists so Codex reloads the model with the same bounded context after every vision-model swap.
 
 - [ ] **Step 5: Add an explicit setup script**
 
 ```powershell
 # scripts/setup_local_agent.ps1
 [CmdletBinding()]
-param(
-    [switch]$PullModels,
-    [switch]$CreateProfile
-)
+param([switch]$CreateProfile)
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if (-not (Get-Command ollama -ErrorAction SilentlyContinue)) {
-    throw 'Ollama is missing. Install it with: winget install Ollama.Ollama'
-}
-if ($PullModels) {
-    & ollama pull gpt-oss:20b
-    if ($LASTEXITCODE -ne 0) { throw 'Failed to pull gpt-oss:20b' }
-    & ollama pull qwen3.5:9b
-    if ($LASTEXITCODE -ne 0) { throw 'Failed to pull qwen3.5:9b' }
+    throw 'Ollama is missing. Copy it from approved offline installation media.'
 }
 if ($CreateProfile) {
     $modelFile = Join-Path $repoRoot 'config\ollama\gpt-oss-20b-32k.Modelfile'
@@ -1183,7 +1175,7 @@ if ($CreateProfile) {
 }
 $python = Join-Path $repoRoot '.venv\Scripts\python.exe'
 if (-not (Test-Path -LiteralPath $python)) {
-    throw 'Repository Python is missing. Create .venv and install requirements.txt.'
+    throw 'Repository Python is missing. Restore .venv from the approved offline wheelhouse or environment archive.'
 }
 & $python -m scripts.local_agent_preflight --root $repoRoot
 exit $LASTEXITCODE
@@ -1204,6 +1196,7 @@ if (-not (Test-Path -LiteralPath $python)) {
 & $python -m scripts.local_agent_preflight --root $repoRoot
 if ($LASTEXITCODE -ne 0) { throw 'Local agent preflight failed. Resolve the listed actions and retry.' }
 $env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+$env:OPENMONTAGE_OFFLINE = '1'
 $env:OPENMONTAGE_ORCHESTRATOR_MODEL = 'openmontage-gpt-oss:20b-32k'
 $env:OPENMONTAGE_VISION_MODEL = 'qwen3.5:9b'
 $env:OPENMONTAGE_ENFORCE_OLLAMA_GPU_GUARD = '1'
@@ -1320,11 +1313,10 @@ Expected: one skipped test with the opt-in reason; no Ollama call occurs.
 
 - [ ] **Step 3: Replace the README “Coming soon” note with local setup**
 
-Document these exact commands and explain that downloads are opt-in:
+Document these exact commands and explain that prerequisites must already be
+present from approved offline media; the scripts perform no downloads:
 
 ```powershell
-ollama pull gpt-oss:20b
-ollama pull qwen3.5:9b
 .\scripts\setup_local_agent.ps1 -CreateProfile
 .\scripts\start_local_agent.ps1
 ```
@@ -1361,8 +1353,8 @@ $env:OPENMONTAGE_LOCAL_LLM_SMOKE='1'
 .\.venv\Scripts\python.exe -m pytest tests/integration/test_local_llm_smoke.py -v
 ```
 
-- an explicit warning that local ComfyUI/video generation is blocked if an
-  Ollama LLM cannot be unloaded;
+- an explicit warning that every API/HYBRID/network-required tool and remote URL
+  is blocked in offline mode;
 - removal commands:
 
 ```powershell
@@ -1665,25 +1657,10 @@ Use this operational synthesis:
   piece after local changes, and treating picture, dialogue, music, and sound as
   one collaborative construction.
 
-End with a decision checklist and a bibliography linking to authoritative public
-descriptions: Silman-James Press for Murch; Routledge/Taylor & Francis for
-Pearlman and Dmytryk; Focal Press/Google Books metadata for Reisz and Millar; and
-Penguin Random House for Ondaatje. Clearly label any cross-book synthesis as the
-OpenMontage operational interpretation.
-
-Use these public source anchors during implementation, and cite the edition
-actually consulted:
-
-- Murch: `https://www.silmanjamespress.com/shop/filmmaking-directing/in-the-blink-of-an-eye2nd-edition/`
-- Pearlman: `https://www.routledge.com/Cutting-Rhythms-Creative-Film-Editing/Pearlman/p/book/9781041024088`
-  and `https://www.taylorfrancis.com/chapters/mono/10.4324/9781003619604-4/timing-pacing-trajectory-phrasing-karen-pearlman`
-- Reisz/Millar: `https://books.google.com/books/about/The_Technique_of_Film_Editing.html?id=heW7nNFD8i4C`
-- Dmytryk: `https://www.routledge.com/On-Film-Editing-An-Introduction-to-the-Art-of-Film-Construction/Dmytryk/p/book/9781138584327`
-- Ondaatje: `https://www.penguinrandomhouse.com/books/124596/the-conversations-by-michael-ondaatje/`
-
-Public descriptions and previews are sufficient for the high-level principles
-above. Do not claim exhaustive or page-specific coverage unless the user supplies
-the relevant edition or excerpts for local consultation.
+End with a conventional offline bibliography: author, title, publisher, and
+edition, without web links. Clearly label any cross-book synthesis as the
+OpenMontage operational interpretation. Do not claim exhaustive or page-specific
+coverage unless the user supplies the relevant edition or excerpts as local files.
 
 - [ ] **Step 6: Route every source-led edit director through the playbook**
 

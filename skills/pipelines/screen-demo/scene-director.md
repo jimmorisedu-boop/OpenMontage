@@ -13,6 +13,10 @@ You are planning how the viewer's attention moves through an existing screen cap
 | Tools | `frame_sampler`, `scene_detect` | Extract reference frames and transitions |
 | Playbook | Active style playbook | Overlay style and pacing rules |
 
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Read visible UI state, verify action continuity, and identify callout-safe crop regions. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
+
 ## Process
 
 ### 1. Plan Attention, Not Constant Motion

@@ -163,6 +163,14 @@ def _instrument_execute(fn: Callable) -> Callable:
 
     @functools.wraps(fn)
     def wrapper(self, inputs: Any, *args: Any, **kwargs: Any):
+        from lib.offline_guard import ensure_tool_is_offline
+        ensure_tool_is_offline(self, inputs)
+        if (
+            getattr(self, "runtime", None) == ToolRuntime.LOCAL_GPU
+            and getattr(self, "provider", None) != "ollama"
+        ):
+            from lib.gpu_guard import ensure_ollama_models_unloaded
+            ensure_ollama_models_unloaded()
         # Event layer is fully optional: if it can't import, run untouched.
         try:
             from lib.events import emit_event, infer_project_dir
@@ -303,6 +311,11 @@ class BaseTool(ABC):
 
     def check_dependencies(self) -> None:
         """Verify all dependencies are installed. Raises DependencyError if not."""
+        if os.environ.get("OPENMONTAGE_OFFLINE") == "1" and (
+            self.runtime in {ToolRuntime.API, ToolRuntime.HYBRID}
+            or self.resource_profile.network_required
+        ):
+            raise DependencyError("Tool is disabled by OPENMONTAGE_OFFLINE=1")
         for dep in self.dependencies:
             if dep.startswith(("cmd:", "binary:")):
                 prefix = "cmd:" if dep.startswith("cmd:") else "binary:"

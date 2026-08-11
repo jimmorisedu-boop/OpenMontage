@@ -2,13 +2,17 @@
 
 ## When To Use
 
-Translate the scene plan and localized asset kit into concrete timeline decisions for each language output. The goal is to preserve the source structure where possible without pretending all languages land on the same timing.
+Translate the scene plan and supplied subtitle kit into concrete timeline decisions for each language output while preserving source picture and sound.
+
+## Shared editorial method
+
+Read `skills/creative/video-editing.md` and its editorial evidence reference completely before writing `edit_decisions`. Apply the evidence order, positive-reason rule, cut safety, pacing profile, and five QA passes. Pipeline-specific rules refine this method. Record missing editorial evidence as degraded; use local files only.
 
 ## Process
 
 ### 1. Preserve Structure By Default
 
-Keep the original scene order and major timing unless the translated audio clearly requires extension, compression, or coverage.
+Keep the original scene order and timing. In the offline minimal build, adapt subtitle phrasing and timing without generating translated audio.
 
 ### 2. Apply The Chosen Dub Mode
 

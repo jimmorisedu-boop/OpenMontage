@@ -4,6 +4,10 @@
 
 This stage creates the actual timeline logic for short clips and any optional full-episode companion asset. The audio remains the primary content.
 
+## Shared editorial method
+
+Read `skills/creative/video-editing.md` and its editorial evidence reference completely before writing `edit_decisions`. Apply the evidence order, positive-reason rule, cut safety, pacing profile, and five QA passes. Pipeline-specific rules refine this method. Record missing editorial evidence as degraded; use local files only.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

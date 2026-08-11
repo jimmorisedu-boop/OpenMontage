@@ -2,12 +2,16 @@
 
 ## When To Use
 
-Plan how each localized deliverable will handle timing, visible speech, subtitles, and on-screen text. This is where the pipeline decides whether to preserve the original cut, cover mouth-visible sections, or attempt lip sync.
+Plan how each subtitle-only localized deliverable will handle timing, visible speech, subtitles, and on-screen text while preserving the original local media.
 
 ## Reference Inputs
 
 - `docs/localization-dubbing-best-practices.md`
 - `skills/creative/video-editing.md`
+
+## Offline semantic review
+
+Sample one to three frames per scene and send no more than 20 ordered local files to `ollama_vision_review`. Identify visible text and frames whose meaning conflicts with localized wording. Store evidence under `projects/<project-id>/artifacts/`. If unavailable, mark the review degraded; never use a URL or remote substitute.
 
 ## Process
 

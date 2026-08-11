@@ -4,6 +4,10 @@
 
 You have a scene plan and asset manifest. Your job is to assemble the edit decision list for a talking-head video: primarily keeping the full footage with subtitle overlay and optional enhancements.
 
+## Shared editorial method
+
+Read `skills/creative/video-editing.md` and its editorial evidence reference completely before writing `edit_decisions`. Apply the evidence order, positive-reason rule, cut safety, pacing profile, and five QA passes. Pipeline-specific rules refine this method. Record missing editorial evidence as degraded; use local files only.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import hashlib
 import logging
+import os
 import shutil
 import subprocess
 import time
@@ -233,6 +234,9 @@ class VideoCompose(BaseTool):
         """Check if Remotion rendering is available (requires npx + composer project + node_modules)."""
         import shutil as _shutil
 
+        if os.environ.get("OPENMONTAGE_OFFLINE") == "1":
+            return False
+
         if not _shutil.which("npx"):
             return False
         composer_dir = Path(__file__).resolve().parent.parent.parent / "remotion-composer"
@@ -256,6 +260,8 @@ class VideoCompose(BaseTool):
         Delegates to the dedicated tool so the availability check stays in
         one place (node 22 floor, ffmpeg + npx on PATH).
         """
+        if os.environ.get("OPENMONTAGE_OFFLINE") == "1":
+            return False
         try:
             from tools.video.hyperframes_compose import HyperFramesCompose
             return bool(HyperFramesCompose()._runtime_check()["runtime_available"])
@@ -335,6 +341,13 @@ class VideoCompose(BaseTool):
     def execute(self, inputs: dict[str, Any]) -> ToolResult:
         operation = inputs["operation"]
         start = time.time()
+        if os.environ.get("OPENMONTAGE_OFFLINE") == "1":
+            requested_runtime = (inputs.get("edit_decisions") or {}).get("render_runtime")
+            if operation == "remotion_render" or requested_runtime in {"remotion", "hyperframes"}:
+                return ToolResult(
+                    success=False,
+                    error="Strict offline mode permits the FFmpeg render path only; Remotion/HyperFrames may resolve network assets.",
+                )
 
         try:
             if operation == "compose":

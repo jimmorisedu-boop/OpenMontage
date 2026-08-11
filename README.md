@@ -683,7 +683,18 @@ OpenMontage works with any AI coding assistant that can read files and execute P
 
 All platform files point to the shared `AGENT_GUIDE.md` (operating guide and agent contract) and `PROJECT_CONTEXT.md` (architecture reference).
 
-> **Coming soon:** Local LLM support via **Ollama** and **LM Studio** — run the full production pipeline without any cloud LLM.
+### Fully offline text editing
+
+OpenMontage can edit supplied local footage with a local Codex CLI/Ollama agent. The offline profile uses `gpt-oss:20b` for orchestration and `qwen3.5:9b` for bounded semantic review of sampled frames. It blocks URL inputs, remote Ollama endpoints, API/HYBRID tools, cloud fallbacks, web search, downloads, publishing, and package-resolving render paths; strict offline composition uses FFmpeg.
+
+After placing the required executables, Python environment, and model artifacts on the machine through approved offline media:
+
+```powershell
+.\scripts\setup_local_agent.ps1 -CreateProfile
+.\scripts\start_local_agent.ps1
+```
+
+The scripts never install or download dependencies. See [`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for complete Russian-language workflows and editing prompts.
 
 ---
 

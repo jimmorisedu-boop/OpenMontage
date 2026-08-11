@@ -1,5 +1,25 @@
 # OpenMontage Provider Guide
 
+## Air-gapped local editing profile
+
+Launch with `scripts\start_local_agent.ps1`. It exports `OPENMONTAGE_OFFLINE=1`, restricts Ollama to `http://127.0.0.1:11434`, and enables sequential GPU lifecycle checks. In this mode the provider menu omits every unavailable, API/HYBRID, `network_required`, or HyperFrames tool; URL inputs and remote Ollama hosts fail before execution. Composition is restricted to FFmpeg so a render cannot resolve npm packages, fonts, CDN scripts, or registry assets.
+
+Required local components:
+
+- `openmontage-gpt-oss:20b-32k` derived from the locally present `gpt-oss:20b`;
+- `qwen3.5:9b` for sampled-frame review;
+- Codex CLI, Ollama, FFmpeg/ffprobe, and the repository `.venv` already on disk.
+
+Diagnostics:
+
+```powershell
+ollama list
+ollama ps
+.\.venv\Scripts\python.exe -m scripts.local_agent_preflight --json
+```
+
+Manual GPU recovery: `ollama stop <model>`. Setup and production scripts never run `winget`, `npm install`, `pip install`, `ollama pull`, web search, or media download. Transfer prerequisites with approved offline installation media. See `docs/LOCAL_TEXT_EDITING_GUIDE.md`.
+
 Everything you need to know about every provider in OpenMontage — setup instructions, pricing, free tiers, and what each unlocks.
 
 ---

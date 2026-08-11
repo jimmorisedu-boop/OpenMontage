@@ -30,6 +30,9 @@ The MVP includes:
 - a user-facing local text-editing handbook with copyable commands and complete workflows;
 - an agent-facing editorial playbook covering story, cut selection, pacing, reframing, audio, subtitles, and QA;
 - automated contract and smoke tests that do not require paid APIs.
+- fail-closed air-gapped mode: local paths and loopback Ollama only, with all
+  API/HYBRID/network-required tools omitted from the provider menu and blocked
+  before execution.
 
 The MVP does not include:
 
@@ -39,6 +42,8 @@ The MVP does not include:
 - replacement of pipeline manifests, director skills, checkpoints, or approval gates;
 - simultaneous residency of the orchestrator, vision model, and local generation model;
 - unattended approval of paid generation calls or major creative decisions;
+- web search, URL ingestion, media download, remote asset libraries, cloud APIs,
+  publishing, or network-assisted dependency/model installation;
 - installation of ComfyUI/WAN, Piper, ACE-Step, Real-ESRGAN, CodeFormer,
   rembg, Wav2Lip, SadTalker, or other optional local generation/enhancement stacks.
 
@@ -56,8 +61,8 @@ The launcher starts Codex from the repository root with the Ollama provider
 and `gpt-oss:20b`. The initial target context is 32,768 tokens. The launcher
 must fail with an actionable message when Ollama is unavailable, a required
 model is missing, or the context configuration is below the supported floor.
-It may offer the exact pull command, but it must not silently download a
-multi-gigabyte model.
+It reports which local artifact is missing and instructs the operator to use
+approved offline installation media. It never emits or runs a download command.
 
 ### Two-model routing
 
@@ -102,10 +107,10 @@ Codex CLI + gpt-oss:20b
 
 ### 1. Local agent setup and launcher
 
-A PowerShell setup command checks for Ollama, Node.js, Codex CLI, FFmpeg, the
-repository virtual environment, and both model tags. It reports exact manual
-installation or pull commands for missing dependencies. It does not modify
-global configuration without showing the target and obtaining confirmation.
+A PowerShell setup command checks for Ollama, Codex CLI, FFmpeg, the repository
+virtual environment, and both model tags. It reports missing local artifacts
+without invoking `winget`, `npm`, `pip`, `ollama pull`, or any URL. Prerequisites
+must arrive through approved offline installation media.
 
 A PowerShell launcher:
 
@@ -257,8 +262,8 @@ The 16 GB GPU is treated as a single-model resource.
    `keep_alive: 0` after the response.
 4. The next Codex turn reloads `gpt-oss:20b`; conversation state remains in
    the Codex process.
-5. Before ComfyUI or another local GPU generation tool starts, both configured
-   LLM tags are explicitly unloaded.
+5. Before any other permitted local GPU tool starts, both configured LLM tags
+   are explicitly unloaded.
 
 Model switching adds latency but prevents out-of-memory failures. The system
 must never assume that 64 GB system RAM makes concurrent GPU residency safe.
@@ -282,8 +287,8 @@ There is no silent swap to CLIP, BLIP, LLaVA, or a cloud vision provider.
 
 - **Ollama unavailable:** launcher/tool fails with the checked URL and startup
   guidance.
-- **Model missing:** report the exact missing tag and `ollama pull` command;
-  do not auto-download.
+- **Model missing:** report the exact missing tag and require offline import;
+  never suggest or perform a download.
 - **Insufficient context:** launcher refuses to start the production profile
   below 32K.
 - **Malformed vision JSON:** perform one schema-guided repair, then fail.
@@ -296,9 +301,14 @@ There is no silent swap to CLIP, BLIP, LLaVA, or a cloud vision provider.
 
 ## Safety and Governance
 
-- Local LLM inference sends no prompts, scripts, or frames to a cloud LLM.
-- Domain-specific cloud generation tools remain governed by their existing
-  provider declarations, cost estimates, and approval gates.
+- Local inference sends no prompts, scripts, frames, metadata, or telemetry to
+  a remote service.
+- `OPENMONTAGE_OFFLINE=1` rejects remote URLs and non-loopback Ollama endpoints,
+  marks API/HYBRID/network-required tools unavailable, and removes them from the
+  provider menu. No cloud fallback is permitted.
+- Strict offline composition uses FFmpeg only. Remotion and HyperFrames are
+  hidden and rejected because their projects may resolve npm packages, web fonts,
+  CDN scripts, or remote registry assets.
 - The launcher does not disable Codex sandboxing or approvals globally.
 - OpenMontage's human checkpoints remain binding.
 - Every visual result records source hashes and model/prompt versions.
@@ -360,7 +370,10 @@ The MVP is complete when:
     playbook, and contract tests verify the required workflow and QA sections;
 11. the handbook and agent guidance attribute all five requested works, convert
     their principles into executable editorial checks, and contain no extended
-    quotations or unsupported claims of page-level fidelity.
+    quotations or unsupported claims of page-level fidelity;
+12. the launcher, preflight, provider menu, and BaseTool boundary allow a full
+    source-footage edit with the network physically disconnected and fail closed
+    on every remote URL or network-capable tool.
 
 ## Future Extensions
 

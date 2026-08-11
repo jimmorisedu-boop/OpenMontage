@@ -4,6 +4,10 @@
 
 This stage creates the layered edit logic for a source-led video with support elements. The order matters: anchor cut first, support layers second.
 
+## Shared editorial method
+
+Read `skills/creative/video-editing.md` and its editorial evidence reference completely before writing `edit_decisions`. Apply the evidence order, positive-reason rule, cut safety, pacing profile, and five QA passes. Pipeline-specific rules refine this method. Record missing editorial evidence as degraded; use local files only.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |

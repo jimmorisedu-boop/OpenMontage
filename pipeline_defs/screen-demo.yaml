@@ -128,8 +128,10 @@ stages:
     required_tools: []
     optional_tools:
       - frame_sampler
+      - ollama_vision_review
     tools_available:
       - frame_sampler
+      - ollama_vision_review
     checkpoint_required: true
     human_approval_default: true
     review_focus:

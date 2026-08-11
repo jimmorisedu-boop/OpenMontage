@@ -4,6 +4,21 @@ Start here. This is the complete operating guide and agent contract for OpenMont
 
 For architecture, key files, and conventions see [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md).
 
+## Air-Gapped Mode (Binding Override)
+
+When `OPENMONTAGE_OFFLINE=1`, apply these rules before every other routing rule in this guide:
+
+1. Accept local filesystem paths and loopback services only. Reject video, audio, image, document, or reference URLs.
+2. Do not browse, search, download, publish, upload, call a cloud/API/HYBRID tool, or suggest adding an API key.
+3. Use only tools reported by the offline-filtered provider menu. Do not present unavailable network providers or setup offers.
+4. Never run `winget`, `npm`, `npx`, `pnpm`, `yarn`, `pip install`, `ollama pull`, `git pull`, `yt-dlp`, or another command that can retrieve remote content.
+5. Do not substitute a missing local capability with a remote provider. Mark the stage degraded or blocked and name the missing offline artifact.
+6. Keep Ollama on `127.0.0.1`/`localhost`; a remote Ollama endpoint is forbidden.
+7. Publishing means preparing a local export package only. Do not contact a platform.
+8. Use the FFmpeg composition path. Remotion and HyperFrames are disabled in strict offline mode because projects may resolve packages, fonts, CDN scripts, or registry assets.
+
+The normal URL-reference workflow, cloud provider menu, research workflow, setup offers, and publishing integrations below are disabled in air-gapped mode. Local pipeline, checkpoint, approval, artifact, and review contracts remain binding.
+
 ## First Interaction — Onboarding
 
 When the user's first message is vague, exploratory, or asks what you can do ("make me a video", "what can you do?", "help me create something", "I want to make content"), read the onboarding skill **before** doing anything else:

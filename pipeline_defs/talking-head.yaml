@@ -90,10 +90,12 @@ stages:
     required_tools: []
     optional_tools:
       - frame_sampler    # representative frame extraction
+      - ollama_vision_review  # offline semantic frame review
       - face_tracker     # face position analysis for reframing decisions
       - silence_cutter   # silence detection for jump cut planning
     tools_available:
       - frame_sampler
+      - ollama_vision_review
       - face_tracker
       - silence_cutter
     checkpoint_required: true

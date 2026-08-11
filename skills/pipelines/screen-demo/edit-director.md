@@ -4,6 +4,10 @@
 
 This stage turns the plan into a concrete, schema-valid edit: trims, speeds, overlays, subtitles, and transitions. Keep the edit simple enough to execute with the current tooling and explicit enough that composition is predictable.
 
+## Shared editorial method
+
+Read `skills/creative/video-editing.md` and its editorial evidence reference completely before writing `edit_decisions`. Apply the evidence order, positive-reason rule, cut safety, pacing profile, and five QA passes. Pipeline-specific rules refine this method. Record missing editorial evidence as degraded; use local files only.
+
 ## Prerequisites
 
 | Layer | Resource | Purpose |
