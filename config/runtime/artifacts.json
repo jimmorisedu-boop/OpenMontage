@@ -1,0 +1,10 @@
+{
+  "runtime_policy": "checksummed-only",
+  "jan": {
+    "tag": "v0.8.0",
+    "commit": "042bf6dc0c9a0a93baf66c8fe5bc2654f095258e",
+    "source_url": "https://github.com/janhq/jan/archive/refs/tags/v0.8.0.zip",
+    "source_sha256": "d74fff3a692dc1f7cd38b03f9ecd277ac1119b37d02539e317df3d8cb626fd57",
+    "output": "runtime/jan/Jan.exe"
+  }
+}

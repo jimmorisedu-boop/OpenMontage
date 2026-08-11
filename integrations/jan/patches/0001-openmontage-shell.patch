@@ -1,0 +1,11 @@
+diff --git a/OPENMONTAGE_INTEGRATION.md b/OPENMONTAGE_INTEGRATION.md
+new file mode 100644
+index 0000000..d65951b
+--- /dev/null
++++ b/OPENMONTAGE_INTEGRATION.md
+@@ -0,0 +1,5 @@
++# OpenMontage integration build
++
++This Jan build is embedded as the local chat shell for OpenMontage.
++Runtime configuration disables cloud providers, telemetry, updates, and remote
++tools; OpenMontage state is routed to repository-local runtime directories.

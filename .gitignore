@@ -96,7 +96,7 @@ venv/
 .venv/
 
 # Portable local AI runtime and model weights
-runtime/
+/runtime/
 
 # Backlot local cache (thumbnails)
 .backlot/
