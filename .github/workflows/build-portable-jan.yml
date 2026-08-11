@@ -43,8 +43,8 @@ jobs:
       - name: Apply OpenMontage patch
         shell: pwsh
         run: |
-          git -C .jan-source apply --check "$env:GITHUB_WORKSPACE\integrations\jan\patches\0001-openmontage-shell.patch"
-          git -C .jan-source apply "$env:GITHUB_WORKSPACE\integrations\jan\patches\0001-openmontage-shell.patch"
+          git -C .jan-source apply --unidiff-zero --check "$env:GITHUB_WORKSPACE\integrations\jan\patches\0001-openmontage-shell.patch"
+          git -C .jan-source apply --unidiff-zero "$env:GITHUB_WORKSPACE\integrations\jan\patches\0001-openmontage-shell.patch"
 
       - name: Configure Jan build tools
         shell: pwsh
@@ -61,6 +61,11 @@ jobs:
           $env:PATH = "$shimDir;$env:PATH"
           yarn --version
           yarn config set -H enableImmutableInstalls false
+
+      - name: Test portable runtime patch
+        shell: pwsh
+        working-directory: .jan-source/src-tauri
+        run: cargo test --lib portable
 
       - name: Build Jan
         shell: bash

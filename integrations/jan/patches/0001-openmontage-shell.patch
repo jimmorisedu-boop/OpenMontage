@@ -9,3 +9,123 @@ index 0000000..d65951b
 +This Jan build is embedded as the local chat shell for OpenMontage.
 +Runtime configuration disables cloud providers, telemetry, updates, and remote
 +tools; OpenMontage state is routed to repository-local runtime directories.
+diff --git a/src-tauri/src/core/app/commands.rs b/src-tauri/src/core/app/commands.rs
+index ffd0e83..73c8bfa 100644
+--- a/src-tauri/src/core/app/commands.rs
++++ b/src-tauri/src/core/app/commands.rs
+@@ -13,0 +14,10 @@ use crate::core::state::AppState;
++const OPENMONTAGE_DATA_ROOT_ENV: &str = "OPENMONTAGE_JAN_DATA_ROOT";
++
++fn portable_data_root_from(value: Option<std::ffi::OsString>) -> Option<PathBuf> {
++    value.filter(|path| !path.is_empty()).map(PathBuf::from)
++}
++
++fn portable_data_root() -> Option<PathBuf> {
++    portable_data_root_from(std::env::var_os(OPENMONTAGE_DATA_ROOT_ENV))
++}
++
+@@ -16 +26,3 @@ fn resolve_human_readable_app_data_dir() -> Option<PathBuf> {
+-    dirs::data_dir().map(|d| d.join(env!("CARGO_PKG_NAME")))
++    portable_data_root()
++        .map(|root| root.join("settings"))
++        .or_else(|| dirs::data_dir().map(|d| d.join(env!("CARGO_PKG_NAME"))))
+@@ -21 +33,3 @@ fn resolve_bundle_app_data_dir() -> Option<PathBuf> {
+-    dirs::data_dir().map(|d| d.join(TAURI_BUNDLE_IDENTIFIER))
++    portable_data_root()
++        .map(|root| root.join("bundle-settings"))
++        .or_else(|| dirs::data_dir().map(|d| d.join(TAURI_BUNDLE_IDENTIFIER)))
+@@ -76,0 +91,4 @@ fn app_data_dir_with_fallback<R: Runtime>(app_handle: &tauri::AppHandle<R>) -> P
++    if let Some(root) = portable_data_root() {
++        return root.join("settings");
++    }
++
+@@ -114,0 +133,4 @@ pub fn resolve_jan_data_folder() -> PathBuf {
++    if let Some(root) = portable_data_root() {
++        return root.join("data");
++    }
++
+@@ -246,0 +269,4 @@ pub fn default_data_folder_path<R: Runtime>(app_handle: tauri::AppHandle<R>) ->
++    if let Some(root) = portable_data_root() {
++        return root.join("data").to_string_lossy().into_owned();
++    }
++
+@@ -330,0 +357,15 @@ mod tests {
++    #[test]
++    fn portable_data_root_rejects_empty_values() {
++        assert_eq!(portable_data_root_from(None), None);
++        assert_eq!(portable_data_root_from(Some(std::ffi::OsString::new())), None);
++    }
++
++    #[test]
++    fn portable_data_root_preserves_the_explicit_path() {
++        let root = PathBuf::from(r"D:\OpenMontage\runtime\jan-data");
++        assert_eq!(
++            portable_data_root_from(Some(root.clone().into_os_string())),
++            Some(root)
++        );
++    }
++
+diff --git a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
+index f3085be..a442b3f 100644
+--- a/src-tauri/src/lib.rs
++++ b/src-tauri/src/lib.rs
+@@ -22,0 +23,56 @@ use tokio::sync::Mutex;
++#[cfg(not(feature = "cli"))]
++const OPENMONTAGE_DATA_ROOT_ENV: &str = "OPENMONTAGE_JAN_DATA_ROOT";
++
++#[cfg(not(feature = "cli"))]
++fn portable_data_root_for_executable(executable: &std::path::Path) -> Option<std::path::PathBuf> {
++    executable.parent()?.parent().map(|runtime| runtime.join("jan-data"))
++}
++
++#[cfg(not(feature = "cli"))]
++fn configure_portable_runtime_environment() -> std::io::Result<std::path::PathBuf> {
++    let root = std::env::var_os(OPENMONTAGE_DATA_ROOT_ENV)
++        .filter(|path| !path.is_empty())
++        .map(std::path::PathBuf::from)
++        .or_else(|| {
++            std::env::current_exe()
++                .ok()
++                .and_then(|path| portable_data_root_for_executable(&path))
++        })
++        .ok_or_else(|| std::io::Error::other("failed to resolve portable Jan data root"))?;
++
++    let paths = [
++        (OPENMONTAGE_DATA_ROOT_ENV, root.clone()),
++        ("WEBVIEW2_USER_DATA_FOLDER", root.join("webview2")),
++        ("APPDATA", root.join("appdata")),
++        ("LOCALAPPDATA", root.join("localappdata")),
++        ("TEMP", root.join("temp")),
++        ("TMP", root.join("temp")),
++    ];
++    for (name, path) in paths {
++        std::fs::create_dir_all(&path)?;
++        std::env::set_var(name, path);
++    }
++    Ok(root)
++}
++
++#[cfg(all(test, not(feature = "cli")))]
++mod portable_runtime_tests {
++    use super::portable_data_root_for_executable;
++    use std::path::Path;
++
++    #[test]
++    fn executable_resolves_to_the_sibling_runtime_data_directory() {
++        assert_eq!(
++            portable_data_root_for_executable(Path::new(
++                r"D:\OpenMontage\runtime\jan\Jan.exe"
++            )),
++            Some(Path::new(r"D:\OpenMontage\runtime\jan-data").to_path_buf())
++        );
++    }
++
++    #[test]
++    fn executable_without_two_parent_directories_is_rejected() {
++        assert_eq!(portable_data_root_for_executable(Path::new("Jan.exe")), None);
++    }
++}
++
+@@ -199,0 +256,2 @@ pub fn run() {
++    configure_portable_runtime_environment()
++        .expect("failed to configure the portable OpenMontage runtime");

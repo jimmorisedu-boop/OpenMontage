@@ -5,6 +5,8 @@
     "commit": "042bf6dc0c9a0a93baf66c8fe5bc2654f095258e",
     "source_url": "https://github.com/janhq/jan/archive/refs/tags/v0.8.0.zip",
     "source_sha256": "d74fff3a692dc1f7cd38b03f9ecd277ac1119b37d02539e317df3d8cb626fd57",
+    "portable_url": "https://github.com/jimmorisedu-boop/OpenMontage/releases/download/openmontage-jan-v0.8.0/OpenMontage-Jan-v0.8.0.exe",
+    "portable_sha256": "cca5ce9c2043cbd7076e724e7ffa19086a4912f5e4343ea0a8623f06a5873276",
     "output": "runtime/jan/Jan.exe"
   }
 }

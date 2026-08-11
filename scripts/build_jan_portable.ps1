@@ -3,7 +3,10 @@ param(
     [switch]$ValidateOnly,
     [switch]$DispatchHostedBuild,
     [switch]$InstallArtifact,
-    [switch]$ProbePortableBoundary
+    [switch]$ProbePortableBoundary,
+    [string]$ProbeExecutable,
+    [ValidateRange(1, 60)]
+    [int]$ProbeSeconds = 8
 )
 
 $ErrorActionPreference = 'Stop'
@@ -44,7 +47,7 @@ if ($ValidateOnly) {
 if ($DispatchHostedBuild) {
     $branch = (git -C $repoRoot branch --show-current).Trim()
     if (-not $branch) { throw 'The hosted build requires a named Git branch.' }
-    gh workflow run 'build-portable-jan.yml' --repo 'calesthio/OpenMontage' --ref $branch
+    gh workflow run 'build-portable-jan.yml' --repo 'jimmorisedu-boop/OpenMontage' --ref $branch
     if ($LASTEXITCODE -ne 0) { throw 'GitHub rejected the portable Jan workflow dispatch.' }
     Write-Output "Dispatched portable Jan build for $branch"
 }
@@ -71,8 +74,9 @@ if ($InstallArtifact) {
 }
 
 if ($ProbePortableBoundary) {
-    if (-not (Test-Path -LiteralPath $outputPath)) {
-        throw "Portable Jan is missing: $outputPath"
+    $probePath = if ($ProbeExecutable) { $ProbeExecutable } else { $outputPath }
+    if (-not (Test-Path -LiteralPath $probePath)) {
+        throw "Portable Jan is missing: $probePath"
     }
 
     $externalCandidates = @(
@@ -92,7 +96,7 @@ if ($ProbePortableBoundary) {
         return @($items | Sort-Object)
     }
 
-    $before = Get-BoundarySnapshot
+    $before = @(Get-BoundarySnapshot)
     $localAppData = Join-Path $runtimeRoot 'jan-data\appdata'
     $localLocalAppData = Join-Path $runtimeRoot 'jan-data\localappdata'
     $localTemp = Join-Path $runtimeRoot 'temp\jan-probe'
@@ -101,15 +105,18 @@ if ($ProbePortableBoundary) {
     $oldLocalAppData = $env:LOCALAPPDATA
     $oldTemp = $env:TEMP
     $oldTmp = $env:TMP
+    $oldOpenMontageDataRoot = $env:OPENMONTAGE_JAN_DATA_ROOT
+    $oldWebViewDataFolder = $env:WEBVIEW2_USER_DATA_FOLDER
     try {
         $env:APPDATA = $localAppData
         $env:LOCALAPPDATA = $localLocalAppData
         $env:TEMP = $localTemp
         $env:TMP = $localTemp
-        $env:JAN_DATA_FOLDER = Join-Path $runtimeRoot 'jan-data\data'
-        $process = Start-Process -FilePath $outputPath -PassThru
+        $env:OPENMONTAGE_JAN_DATA_ROOT = Join-Path $runtimeRoot 'jan-data'
+        $env:WEBVIEW2_USER_DATA_FOLDER = Join-Path $runtimeRoot 'jan-data\webview2'
+        $process = Start-Process -FilePath $probePath -PassThru
         try {
-            if (-not $process.WaitForExit(8000)) {
+            if (-not $process.WaitForExit($ProbeSeconds * 1000)) {
                 Stop-Process -Id $process.Id -Force
                 $process.WaitForExit()
             }
@@ -121,9 +128,10 @@ if ($ProbePortableBoundary) {
         $env:LOCALAPPDATA = $oldLocalAppData
         $env:TEMP = $oldTemp
         $env:TMP = $oldTmp
-        Remove-Item Env:JAN_DATA_FOLDER -ErrorAction SilentlyContinue
+        $env:OPENMONTAGE_JAN_DATA_ROOT = $oldOpenMontageDataRoot
+        $env:WEBVIEW2_USER_DATA_FOLDER = $oldWebViewDataFolder
     }
-    $after = Get-BoundarySnapshot
+    $after = @(Get-BoundarySnapshot)
     $difference = Compare-Object -ReferenceObject $before -DifferenceObject $after
     if ($difference) {
         $details = ($difference | ForEach-Object InputObject) -join [Environment]::NewLine
