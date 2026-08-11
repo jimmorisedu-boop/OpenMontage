@@ -27,6 +27,8 @@ The MVP includes:
 - scene-guided frame sampling, semantic frame review, structured results, and caching;
 - explicit sequential model loading for a 16 GB GPU;
 - graceful degraded operation when visual analysis is unavailable;
+- a user-facing local text-editing handbook with copyable commands and complete workflows;
+- an agent-facing editorial playbook covering story, cut selection, pacing, reframing, audio, subtitles, and QA;
 - automated contract and smoke tests that do not require paid APIs.
 
 The MVP does not include:
@@ -36,7 +38,9 @@ The MVP does not include:
 - direct ingestion of an entire video by the vision model;
 - replacement of pipeline manifests, director skills, checkpoints, or approval gates;
 - simultaneous residency of the orchestrator, vision model, and local generation model;
-- unattended approval of paid generation calls or major creative decisions.
+- unattended approval of paid generation calls or major creative decisions;
+- installation of ComfyUI/WAN, Piper, ACE-Step, Real-ESRGAN, CodeFormer,
+  rembg, Wav2Lip, SadTalker, or other optional local generation/enhancement stacks.
 
 ## Chosen Approach
 
@@ -187,6 +191,35 @@ artifact area so the run remains inspectable and portable. A cache hit avoids
 loading the vision model. Changing the model or prompt/schema version produces
 a new entry rather than overwriting previous evidence.
 
+### 6. Editing guidance
+
+The MVP ships two complementary instruction layers.
+
+The user-facing handbook explains how to prepare source files, describe an
+editing goal, choose a platform/duration, request transcript-led and
+vision-led decisions, review the proposed cut, approve gated stages, and find
+the final output. It includes complete examples for talking-head cleanup,
+podcast highlights, short-form extraction, screen demos, aspect-ratio
+variants, subtitle-only localization, and revision requests. Every example is
+achievable with the minimal local stack and clearly labels unsupported voice,
+music, image, and video generation.
+
+The agent-facing editorial playbook defines a repeatable decision algorithm:
+
+1. preserve the source and inspect media metadata;
+2. establish audience, platform, duration, delivery promise, and non-negotiable content;
+3. combine transcript, silence, scene, deterministic quality, and semantic frame evidence;
+4. build the narrative spine before choosing individual cuts;
+5. produce evidence-backed keep/remove decisions with exact timecodes and cut handles;
+6. design pacing, reframing, subtitles, graphics, and audio without hiding source defects;
+7. render a reviewable draft and run continuity, intelligibility, subtitle, crop, and technical QA;
+8. record warnings and obtain required approval before final render.
+
+The playbook distinguishes editorial judgment from mechanical execution and
+prohibits destructive source edits, mid-word cuts, clipped phonemes, silent
+story changes, unsupported generated assets, and unverifiable claims about
+what is visible in the footage.
+
 ## GPU Lifecycle
 
 The 16 GB GPU is treated as a single-model resource.
@@ -295,6 +328,10 @@ The MVP is complete when:
    path, never a silent cloud/provider substitution;
 8. relevant unit and contract tests pass, and the opt-in two-model smoke test
    passes on the target machine.
+9. a new user can follow the local editing handbook from source-file placement
+   to approved render without reading repository architecture documentation;
+10. every source-led edit director routes agents through the shared editorial
+    playbook, and contract tests verify the required workflow and QA sections.
 
 ## Future Extensions
 
