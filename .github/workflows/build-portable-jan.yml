@@ -53,8 +53,12 @@ jobs:
           rustc --version
           cargo --version
           make --version
-          corepack enable
+          $shimDir = Join-Path $env:RUNNER_TEMP 'corepack-bin'
+          New-Item -ItemType Directory -Force -Path $shimDir | Out-Null
+          corepack enable --install-directory $shimDir
           corepack prepare yarn@4.5.3 --activate
+          $shimDir | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+          $env:PATH = "$shimDir;$env:PATH"
           yarn --version
           yarn config set -H enableImmutableInstalls false
 

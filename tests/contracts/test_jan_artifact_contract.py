@@ -62,6 +62,9 @@ def test_hosted_builder_produces_a_hashed_portable_executable():
         "Upload workflow artifact",
         "Publish portable release asset",
     ]
+    configure = next(step for step in job["steps"] if step["name"] == "Configure Jan build tools")
+    assert "corepack enable --install-directory" in configure["run"]
+    assert "$env:GITHUB_PATH" in configure["run"]
 
 
 def test_build_helper_validates_the_hosted_build_contract():
