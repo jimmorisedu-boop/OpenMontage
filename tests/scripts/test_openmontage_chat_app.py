@@ -349,6 +349,20 @@ def test_shell_collapses_panels_and_clamps_layout_for_windowed_mode(tmp_path: Pa
     assert "minmax(0,1fr)" in html
 
 
+def test_shell_uses_a_complete_apple_inspired_dark_material_system(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        'data-theme="apple-dark"', "color-scheme:dark", "--surface-sidebar:#171719",
+        "--surface-content:#0f0f10", "--surface-raised:#242427", "--text-primary:#f5f5f7",
+        "--text-secondary:#a1a1a6", "--separator:rgba(255,255,255,.1)",
+        "backdrop-filter:blur(20px) saturate(150%)", "dark-material",
+        ".project-rail,.context-rail", ".msg.assistant,.card", ".input-composer",
+        ".project-actions,dialog", "prefers-reduced-transparency:reduce",
+    ]:
+        assert marker in html
+
+
 def test_chat_api_returns_structured_summary(tmp_path: Path):
     client = TestClient(create_app(
         root=tmp_path,
