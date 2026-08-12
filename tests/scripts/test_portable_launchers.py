@@ -39,8 +39,8 @@ def test_launcher_opens_the_owned_openmontage_chat_window():
     assert "OPENMONTAGE_OFFLINE = '1'" not in launcher
     assert "OLLAMA_LOAD_TIMEOUT = '15m'" in launcher
     assert "Start-Process" in launcher
-    assert "scripts.openmontage_chat.app" in launcher
-    assert "--app=http://127.0.0.1:" in launcher
+    assert "scripts.openmontage_chat.desktop" in launcher
+    assert "--app=http://127.0.0.1:" not in launcher
     assert "Jan.exe" not in launcher
     assert "codex" not in launcher.lower()
 

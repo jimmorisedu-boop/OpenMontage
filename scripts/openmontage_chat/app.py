@@ -50,6 +50,45 @@ def _ollama_chat(payload: dict[str, Any]) -> dict[str, Any]:
         return json.loads(response.read().decode("utf-8"))
 
 
+class DesktopApi:
+    """Direct bridge used by the native WebView2 window; no HTTP server involved."""
+
+    def __init__(self, *, root: Path, ollama_chat=None, file_picker=None) -> None:
+        self.root = root.resolve()
+        self.ollama_chat = ollama_chat or _ollama_chat
+        self.file_picker = file_picker or (lambda: [])
+
+    def pick_materials(self) -> dict[str, Any]:
+        result = []
+        for raw in self.file_picker():
+            path = Path(raw).expanduser().resolve()
+            if not path.is_file():
+                raise FileNotFoundError(f"Файл не найден: {path}")
+            result.append({
+                "name": path.name,
+                "path": str(path),
+                "kind": _kind(path),
+                "mime": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
+                "size": path.stat().st_size,
+            })
+        return {"materials": result}
+
+    def chat(self, body: dict[str, Any]) -> dict[str, Any]:
+        paths = body.get("materials") or []
+        material_context = "\n".join(f"- {Path(path).name}: {path}" for path in paths)
+        prompt = str(body.get("message") or "")
+        if material_context:
+            prompt += "\n\nЛокальные материалы проекта:\n" + material_context
+        messages = [{"role": "system", "content": (
+            "Ты OpenMontage — локальный монтажный ассистент с одной закреплённой моделью. "
+            "Работай с материалами по локальным путям и отвечай по-русски."
+        )}]
+        messages.extend((body.get("history") or [])[-30:])
+        messages.append({"role": "user", "content": prompt})
+        response = self.ollama_chat({"model": MODEL, "messages": messages, "stream": False, "think": "low"})
+        return {"answer": response.get("message", {}).get("content", ""), "model": MODEL}
+
+
 def create_app(*, root: Path | None = None, ollama_chat: Callable[[dict[str, Any]], dict[str, Any]] | None = None) -> FastAPI:
     root = (root or Path(__file__).resolve().parents[2]).resolve()
     chat = ollama_chat or _ollama_chat

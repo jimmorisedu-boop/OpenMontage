@@ -10,7 +10,7 @@ def test_launcher_enables_url_import_only_local_mode():
     text = (ROOT / "scripts" / "start_openmontage.ps1").read_text(encoding="utf-8")
     assert "$env:OPENMONTAGE_NETWORK_MODE = 'url-import-only'" in text
     assert "http://127.0.0.1:11434" in text
-    assert "scripts.openmontage_chat.app" in text
+    assert "scripts.openmontage_chat.desktop" in text
     for forbidden in ["winget", "npm install", "pip install", "ollama pull"]:
         assert forbidden not in text.lower()
 
