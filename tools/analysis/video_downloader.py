@@ -26,6 +26,24 @@ from tools.base_tool import (
 )
 
 
+def detect_platform(url: str) -> str:
+    """Classify a public source URL without performing network access."""
+    url_lower = url.lower()
+    if "youtube.com/shorts" in url_lower:
+        return "shorts"
+    if "youtube.com" in url_lower or "youtu.be" in url_lower:
+        return "youtube"
+    if "instagram.com" in url_lower:
+        return "instagram"
+    if "tiktok.com" in url_lower:
+        return "tiktok"
+    if "vimeo.com" in url_lower:
+        return "vimeo"
+    if "twitter.com" in url_lower or "x.com" in url_lower:
+        return "twitter"
+    return "other_url"
+
+
 class VideoDownloader(BaseTool):
     name = "video_downloader"
     version = "0.1.0"
@@ -135,20 +153,7 @@ class VideoDownloader(BaseTool):
 
     def _detect_platform(self, url: str) -> str:
         """Detect platform from URL."""
-        url_lower = url.lower()
-        if "youtube.com/shorts" in url_lower or "youtu.be" in url_lower and "/shorts" in url_lower:
-            return "shorts"
-        if "youtube.com" in url_lower or "youtu.be" in url_lower:
-            return "youtube"
-        if "instagram.com" in url_lower:
-            return "instagram"
-        if "tiktok.com" in url_lower:
-            return "tiktok"
-        if "vimeo.com" in url_lower:
-            return "vimeo"
-        if "twitter.com" in url_lower or "x.com" in url_lower:
-            return "twitter"
-        return "other_url"
+        return detect_platform(url)
 
     def _extract_metadata(self, url: str) -> dict:
         """Extract metadata without downloading."""

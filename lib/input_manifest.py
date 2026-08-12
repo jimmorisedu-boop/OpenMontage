@@ -165,7 +165,7 @@ def register_download(
         raise ValueError("Downloaded inputs must live under the project's inputs/downloads directory")
     manifest = _load(project_id, pipeline_dir)
     media_type = _EXTENSION_TYPES.get(local_path.suffix.lower(), "unknown")
-    item_id = _stable_id("download", source_url)
+    item_id = _stable_id("download", f"{source_url}\0{local_path.name}")
     item = {
         "id": item_id,
         "path": str(local_path),
