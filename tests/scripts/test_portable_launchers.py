@@ -25,6 +25,7 @@ def test_setup_installs_only_portable_jan_runtime():
         "qwen3.5:9b",
         "seed_jan_profile.py",
         "openmontage_preflight",
+        "..\\..",
     ]
     for marker in required:
         assert marker in setup_and_manifest

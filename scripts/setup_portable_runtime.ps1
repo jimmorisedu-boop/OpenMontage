@@ -55,6 +55,9 @@ if (-not (Test-Path -LiteralPath $paths.python)) {
     $pth = Get-ChildItem -LiteralPath $pythonDir -Filter 'python*._pth' | Select-Object -First 1
     if (-not $pth) { throw 'Portable Python path configuration was not found.' }
     $content = (Get-Content -Raw $pth.FullName).Replace('#import site', 'import site')
+    if ($content -notmatch '(?m)^\.\.\\\.\.$') {
+        $content = $content.TrimEnd() + "`r`n..\..`r`n"
+    }
     Set-Content -LiteralPath $pth.FullName -Value $content -Encoding ascii
     & $paths.python (Get-VerifiedArtifact $artifacts.get_pip) --disable-pip-version-check --no-warn-script-location
     if ($LASTEXITCODE -ne 0) { throw 'Failed to bootstrap pip in portable Python.' }
