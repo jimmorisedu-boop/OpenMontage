@@ -334,6 +334,21 @@ def test_shell_exposes_project_actions_and_persistent_workspace_splitters(tmp_pa
         assert marker in html
 
 
+def test_shell_collapses_panels_and_clamps_layout_for_windowed_mode(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        'id="toggle-projects"', 'id="toggle-context"', 'id="toggle-timeline"',
+        "togglePanel", "collapsedLeft", "collapsedRight", "collapsedTimeline",
+        "clampLayoutToViewport", "availableForSidebars", "window.innerWidth",
+        "window.addEventListener('resize'", "compact-window", "aria-expanded",
+        "Показать проекты", "Скрыть помощника", "Показать обзор монтажа",
+    ]:
+        assert marker in html
+    assert "grid-template-columns:var(--left-track)" in html
+    assert "minmax(0,1fr)" in html
+
+
 def test_chat_api_returns_structured_summary(tmp_path: Path):
     client = TestClient(create_app(
         root=tmp_path,
