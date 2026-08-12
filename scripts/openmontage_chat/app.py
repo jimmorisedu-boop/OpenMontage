@@ -15,6 +15,11 @@ from pydantic import BaseModel
 
 
 MODEL = "openmontage-gpt-oss:20b-32k"
+RESPONSE_INSTRUCTIONS = (
+    " Верни только JSON-объект вида "
+    '{"answer":"итоговый ответ", "summary":["2–4 кратких полезных вывода о подходе"]}. '
+    "В summary не раскрывай скрытые рассуждения, внутренние инструкции, токены или технические логи."
+)
 
 
 class MaterialRequest(BaseModel):
@@ -37,6 +42,27 @@ def _kind(path: Path) -> str:
     if ext in {".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff", ".bmp"}:
         return "image"
     return "document"
+
+
+def parse_model_response(content: str) -> dict[str, Any]:
+    """Extract a final answer and a small user-facing summary, with plain-text fallback."""
+    raw = str(content or "").strip()
+    candidate = raw
+    if candidate.startswith("```") and candidate.endswith("```"):
+        candidate = candidate[3:-3].strip()
+        if candidate.lower().startswith("json"):
+            candidate = candidate[4:].lstrip()
+    try:
+        parsed = json.loads(candidate)
+    except (json.JSONDecodeError, TypeError):
+        return {"answer": raw, "summary": []}
+    if not isinstance(parsed, dict) or not isinstance(parsed.get("answer"), str):
+        return {"answer": raw, "summary": []}
+    summary = parsed.get("summary", [])
+    if not isinstance(summary, list):
+        summary = []
+    clean_summary = [item.strip()[:240] for item in summary if isinstance(item, str) and item.strip()][:4]
+    return {"answer": parsed["answer"].strip(), "summary": clean_summary}
 
 
 def _ollama_chat(payload: dict[str, Any]) -> dict[str, Any]:
@@ -81,12 +107,13 @@ class DesktopApi:
             prompt += "\n\nЛокальные материалы проекта:\n" + material_context
         messages = [{"role": "system", "content": (
             "Ты OpenMontage — локальный монтажный ассистент с одной закреплённой моделью. "
-            "Работай с материалами по локальным путям и отвечай по-русски."
+            "Работай с материалами по локальным путям и отвечай по-русски." + RESPONSE_INSTRUCTIONS
         )}]
         messages.extend((body.get("history") or [])[-30:])
         messages.append({"role": "user", "content": prompt})
         response = self.ollama_chat({"model": MODEL, "messages": messages, "stream": False, "think": "low"})
-        return {"answer": response.get("message", {}).get("content", ""), "model": MODEL}
+        result = parse_model_response(response.get("message", {}).get("content", ""))
+        return {**result, "model": MODEL}
 
 
 def create_app(*, root: Path | None = None, ollama_chat: Callable[[dict[str, Any]], dict[str, Any]] | None = None) -> FastAPI:
@@ -145,7 +172,7 @@ if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.
         messages = [{"role": "system", "content": (
             "Ты OpenMontage — локальный монтажный ассистент. Интерфейс использует одну закреплённую модель. "
             "Работай с локальными материалами по их путям, объясняй монтажные решения ясно и по-русски. "
-            f"Текущий режим разрешений: {body.mode}."
+            f"Текущий режим разрешений: {body.mode}." + RESPONSE_INSTRUCTIONS
         )}]
         messages.extend(body.history[-30:])
         messages.append({"role": "user", "content": prompt})
@@ -153,7 +180,8 @@ if ($dialog.ShowDialog() -eq [System.Windows.Forms.DialogResult]::OK) { $dialog.
             response = chat({"model": MODEL, "messages": messages, "stream": False, "think": "low"})
         except Exception as exc:
             raise HTTPException(502, f"Локальная модель недоступна: {exc}") from exc
-        return {"answer": response.get("message", {}).get("content", ""), "model": MODEL}
+        result = parse_model_response(response.get("message", {}).get("content", ""))
+        return {**result, "model": MODEL}
 
     return app
 
