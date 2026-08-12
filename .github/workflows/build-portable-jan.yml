@@ -26,6 +26,7 @@ jobs:
       JAN_COMMIT: 042bf6dc0c9a0a93baf66c8fe5bc2654f095258e
       RELEASE_TAG: openmontage-jan-v0.8.0
       ASSET_NAME: OpenMontage-Jan-v0.8.0.exe
+      AUTO_UPDATER_DISABLED: "true"
     steps:
       - name: Checkout OpenMontage integration
         uses: actions/checkout@v4

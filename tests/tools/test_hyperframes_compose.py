@@ -323,6 +323,8 @@ def test_provider_menu_summary_returns_expected_shape():
         "capabilities",
         "setup_offers",
         "runtime_warnings",
+        "network_mode",
+        "offline_mode",
     }
     # Composition runtimes MUST include all three engines so the HARD RULE
     # presentation has the data it needs.

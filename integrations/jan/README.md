@@ -20,6 +20,13 @@ directly into `runtime/jan/`; it does not invoke a Jan installer or create
 shortcuts. The maintained patch is applied with `git apply`; a source upgrade
 must first pass `git apply --check` and all Jan/OpenMontage integration tests.
 
-The initial patch adds a build marker. Task 9 of the implementation plan expands
-the same patch with the permission selector, fixed provider/assistant view, MCP
-context injection, and removal of online features.
+The maintained patch contains the portable state boundary plus the OpenMontage
+chat-shell profile: one loopback Ollama provider, one visible orchestration
+model, a per-conversation Auto/Confirm/Read-only selector, hidden MCP context,
+and a single local OpenMontage MCP server. Cloud provider navigation, the model
+picker, Hub navigation, updater checks, browser MCP defaults, remote fonts,
+analytics endpoints, and non-loopback CSP access are excluded from this build.
+
+`scripts/seed_jan_profile.py` writes the relocation-safe assistant, MCP, and
+model profile beneath `runtime/jan-data/data`. It is safe to run repeatedly and
+stores no absolute installation path in the profile.

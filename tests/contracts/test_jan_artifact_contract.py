@@ -46,6 +46,41 @@ def test_jan_integration_contains_the_reproducible_inputs():
     assert missing == []
 
 
+def test_jan_patch_contains_the_openmontage_chat_shell_contract():
+    patch = (
+        ROOT
+        / "integrations"
+        / "jan"
+        / "patches"
+        / "0001-openmontage-shell.patch"
+    ).read_text(encoding="utf-8")
+
+    required_markers = [
+        "openmontage-gpt-oss:20b-32k",
+        "http://127.0.0.1:11434/v1",
+        "OpenMontagePermissionSelector",
+        "_openmontage_context",
+        "bootstrap_conversation",
+        "set_permission_mode",
+        "runtime/python/python.exe",
+        "scripts.openmontage_mcp.server",
+    ]
+    for marker in required_markers:
+        assert marker in patch
+
+    forbidden_online_defaults = [
+        "search-mcp-server@latest",
+        "https://mcp.exa.ai/mcp",
+        '"command": "npx"',
+        '"command": "uvx"',
+    ]
+    added_lines = "\n".join(
+        line for line in patch.splitlines() if line.startswith("+") and not line.startswith("+++")
+    )
+    for marker in forbidden_online_defaults:
+        assert marker not in added_lines
+
+
 def test_hosted_builder_produces_a_hashed_portable_executable():
     workflow_path = ROOT / ".github" / "workflows" / "build-portable-jan.yml"
     workflow = yaml.load(workflow_path.read_text(encoding="utf-8"), Loader=yaml.BaseLoader)

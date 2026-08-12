@@ -1,6 +1,7 @@
+
 diff --git a/OPENMONTAGE_INTEGRATION.md b/OPENMONTAGE_INTEGRATION.md
 new file mode 100644
-index 0000000..d65951b
+index 0000000000000000000000000000000000000000..8a0b4b4c0e2c570dd41c1521e7d2509ada0c7bf1
 --- /dev/null
 +++ b/OPENMONTAGE_INTEGRATION.md
 @@ -0,0 +1,5 @@
@@ -9,8 +10,9 @@ index 0000000..d65951b
 +This Jan build is embedded as the local chat shell for OpenMontage.
 +Runtime configuration disables cloud providers, telemetry, updates, and remote
 +tools; OpenMontage state is routed to repository-local runtime directories.
+
 diff --git a/src-tauri/src/core/app/commands.rs b/src-tauri/src/core/app/commands.rs
-index ffd0e83..73c8bfa 100644
+index ffd0e83905b93a28314e9b79d1f0054a2969a2e4..5e1299f1fb4f3e3a9111c0965f8a56188b26ee34 100644
 --- a/src-tauri/src/core/app/commands.rs
 +++ b/src-tauri/src/core/app/commands.rs
 @@ -13,0 +14,10 @@ use crate::core::state::AppState;
@@ -65,8 +67,77 @@ index ffd0e83..73c8bfa 100644
 +        );
 +    }
 +
+
+diff --git a/src-tauri/src/core/mcp/constants.rs b/src-tauri/src/core/mcp/constants.rs
+index 658cc4aaaefe7f50846b345c568080b9adebfb4a..db618895644e3421da5931cd294810156daee81e 100644
+--- a/src-tauri/src/core/mcp/constants.rs
++++ b/src-tauri/src/core/mcp/constants.rs
+@@ -9,8 +9,5 @@ pub const DEFAULT_MCP_CONFIG: &str = r#"{
+-    "Jan Browser MCP": {
+-      "command": "npx",
+-      "args": ["-y", "search-mcp-server@latest"],
+-      "env": {
+-        "BRIDGE_HOST": "127.0.0.1",
+-        "BRIDGE_PORT": "17389"
+-      },
+-      "active": false,
++    "OpenMontage": {
++      "command": "runtime/python/python.exe",
++      "args": ["-m", "scripts.openmontage_mcp.server"],
++      "env": { "OPENMONTAGE_ROOT": ".", "OPENMONTAGE_NETWORK_MODE": "url-import-only", "PYTHONNOUSERSITE": "1" },
++      "active": true,
+@@ -18,42 +14,0 @@ pub const DEFAULT_MCP_CONFIG: &str = r#"{
+-    },
+-    "exa": {
+-      "type": "http",
+-      "url": "https://mcp.exa.ai/mcp",
+-      "command": "",
+-      "args": [],
+-      "env": {},
+-      "active": true
+-    },
+-    "browsermcp": {
+-      "command": "npx",
+-      "args": ["@browsermcp/mcp"],
+-      "env": {},
+-      "active": false
+-    },
+-    "fetch": {
+-      "command": "uvx",
+-      "args": ["mcp-server-fetch"],
+-      "env": {},
+-      "active": false
+-    },
+-    "serper": {
+-      "command": "npx",
+-      "args": ["-y", "serper-search-scrape-mcp-server"],
+-      "env": { "SERPER_API_KEY": "YOUR_SERPER_API_KEY_HERE" },
+-      "active": false
+-    },
+-    "filesystem": {
+-      "command": "npx",
+-      "args": [
+-        "-y",
+-        "@modelcontextprotocol/server-filesystem",
+-        "/path/to/other/allowed/dir"
+-      ],
+-      "env": {},
+-      "active": false
+-    },
+-    "sequential-thinking": {
+-      "command": "npx",
+-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+-      "env": {},
+-      "active": false
+@@ -63 +18 @@ pub const DEFAULT_MCP_CONFIG: &str = r#"{
+-    "toolCallTimeoutSeconds": 30,
++    "toolCallTimeoutSeconds": 300,
+@@ -67 +22 @@ pub const DEFAULT_MCP_CONFIG: &str = r#"{
+-    "enableSmartToolRouting": true,
++    "enableSmartToolRouting": false,
+
 diff --git a/src-tauri/src/lib.rs b/src-tauri/src/lib.rs
-index f3085be..a442b3f 100644
+index f3085be5e55a988236bc78b2e11a6248f30e3a73..da26eddbfae35c4916f41b55e4337ed1aafcd6ac 100644
 --- a/src-tauri/src/lib.rs
 +++ b/src-tauri/src/lib.rs
 @@ -22,0 +23,56 @@ use tokio::sync::Mutex;
@@ -129,3 +200,264 @@ index f3085be..a442b3f 100644
 @@ -199,0 +256,2 @@ pub fn run() {
 +    configure_portable_runtime_environment()
 +        .expect("failed to configure the portable OpenMontage runtime");
+
+diff --git a/src-tauri/tauri.conf.json b/src-tauri/tauri.conf.json
+index 33b40fbc8ab512762002b3234f64c88325c5e446..9f65d5e7ee67df560fb05db242a011cd8ab038b9 100644
+--- a/src-tauri/tauri.conf.json
++++ b/src-tauri/tauri.conf.json
+@@ -23 +23 @@
+-        "connect-src": "'self' asset: ipc: data: http://asset.localhost http://ipc.localhost http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:* https: http:",
++        "connect-src": "'self' asset: ipc: data: http://asset.localhost http://ipc.localhost http://localhost:* http://127.0.0.1:* ws://localhost:* ws://127.0.0.1:*",
+@@ -25 +25 @@
+-          "https://fonts.gstatic.com blob: data: tauri://localhost http://tauri.localhost"
++          "'self' blob: data: tauri://localhost http://tauri.localhost"
+@@ -27,3 +27,3 @@
+-        "img-src": "'self' asset: http://asset.localhost blob: data: https:",
+-        "style-src": "'unsafe-inline' 'self' https://fonts.googleapis.com",
+-        "script-src": "'self' 'unsafe-eval' asset: $APPDATA/**.* http://asset.localhost https://eu-assets.i.posthog.com https://posthog.com"
++        "img-src": "'self' asset: http://asset.localhost blob: data:",
++        "style-src": "'unsafe-inline' 'self'",
++        "script-src": "'self' 'unsafe-eval' asset: $APPDATA/**.* http://asset.localhost"
+
+diff --git a/web-app/src/components/OpenMontagePermissionSelector.tsx b/web-app/src/components/OpenMontagePermissionSelector.tsx
+new file mode 100644
+index 0000000000000000000000000000000000000000..b540a9a3ba3b0c77872830bfd62e9d3aba7cf642
+--- /dev/null
++++ b/web-app/src/components/OpenMontagePermissionSelector.tsx
+@@ -0,0 +1,53 @@
++import { useEffect, useState } from 'react'
++import { ShieldCheck } from 'lucide-react'
++import { Button } from '@/components/ui/button'
++import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
++import { getServiceHub } from '@/hooks/useServiceHub'
++import { OpenMontagePermissionMode, useOpenMontagePermissionStore } from '@/stores/openmontage-permission-store'
++
++const labels: Record<OpenMontagePermissionMode, string> = { auto: 'Auto', confirm: 'Confirm', read_only: 'Read-only' }
++type ToolResult = { content?: Array<{ text?: string }> }
++function parsePayload(result: ToolResult) {
++  const text = result.content?.find((item) => item.text)?.text
++  if (!text) throw new Error('OpenMontage MCP returned no context')
++  const payload = JSON.parse(text)
++  if (!payload.ok || !payload.context) throw new Error(payload.error?.message ?? 'OpenMontage MCP rejected the request')
++  return payload
++}
++export function OpenMontagePermissionSelector({ conversationId }: { conversationId?: string }) {
++  const conversation = useOpenMontagePermissionStore((state) => conversationId ? state.conversations[conversationId] : undefined)
++  const ensure = useOpenMontagePermissionStore((state) => state.ensureConversation)
++  const update = useOpenMontagePermissionStore((state) => state.updateConversation)
++  const [busy, setBusy] = useState(false)
++  useEffect(() => {
++    if (!conversationId) return
++    const state = ensure(conversationId)
++    if (state.context.thread_revision !== 0) return
++    setBusy(true)
++    getServiceHub().mcp().callTool({ serverName: 'OpenMontage', toolName: 'bootstrap_conversation', arguments: {
++      project_id: conversationId, title: 'OpenMontage project', pipeline_type: 'hybrid',
++    }}).then((result) => {
++      const payload = parsePayload(result as ToolResult)
++      update(conversationId, { mode: payload.permission_mode, context: payload.context })
++    }).catch((error) => console.error('OpenMontage bootstrap failed', error)).finally(() => setBusy(false))
++  }, [conversationId, ensure, update])
++  const setMode = async (mode: OpenMontagePermissionMode) => {
++    if (!conversationId || busy) return
++    setBusy(true)
++    try {
++      const payload = parsePayload(await getServiceHub().mcp().callTool({
++        serverName: 'OpenMontage', toolName: 'set_permission_mode', arguments: { mode },
++      }) as ToolResult)
++      update(conversationId, { mode, context: payload.context })
++    } catch (error) { console.error('OpenMontage permission change failed', error) } finally { setBusy(false) }
++  }
++  const mode = conversation?.mode ?? 'confirm'
++  return <DropdownMenu>
++    <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" disabled={!conversationId || busy} className="h-7 gap-1 px-2">
++      <ShieldCheck size={15} /><span className="text-xs">{labels[mode]}</span>
++    </Button></DropdownMenuTrigger>
++    <DropdownMenuContent align="end">{(Object.keys(labels) as OpenMontagePermissionMode[]).map((item) =>
++      <DropdownMenuItem key={item} onClick={() => setMode(item)}>{labels[item]}{item === mode && <span className="ml-auto">✓</span>}</DropdownMenuItem>
++    )}</DropdownMenuContent>
++  </DropdownMenu>
++}
+
+diff --git a/web-app/src/components/left-sidebar/NavMain.tsx b/web-app/src/components/left-sidebar/NavMain.tsx
+index 6ad7b0822899aada8895d7256d6c7be00c45ba9b..1cddd8f46b7743fcb865091e7aaac65a3262a748 100644
+--- a/web-app/src/components/left-sidebar/NavMain.tsx
++++ b/web-app/src/components/left-sidebar/NavMain.tsx
+@@ -87,13 +86,0 @@ const getNavMainItems = (
+-  {
+-    title: 'common:newAgentChat',
+-    animatedIcon: BotIcon,
+-    onClick: onJanClaw,
+-    shortcut: (
+-      <KbdGroup className="ml-auto scale-90 gap-0">
+-        <Kbd className="bg-transparent size-3">
+-          <PlatformMetaKey />
+-        </Kbd>
+-        <Kbd className="bg-transparent size-3 uppercase">{PlatformShortcuts[ShortcutAction.NEW_AGENT_CHAT].key}</Kbd>
+-      </KbdGroup>
+-    ),
+-  },
+@@ -126,10 +112,0 @@ const getNavMainItems = (
+-  {
+-    title: 'common:hub',
+-    url: route.hub.index,
+-    animatedIcon: BlocksIcon,
+-  },
+-  {
+-    title: 'common:settings',
+-    url: route.settings.general,
+-    animatedIcon: SettingsIcon,
+-  },
+
+diff --git a/web-app/src/containers/ChatInput.tsx b/web-app/src/containers/ChatInput.tsx
+index 5d047bae598a7963c49214217bbc463362402514..6b48e91a2bac576418940366e768368d4de5fa48 100644
+--- a/web-app/src/containers/ChatInput.tsx
++++ b/web-app/src/containers/ChatInput.tsx
+@@ -62,0 +63 @@ import { TokenCounter } from '@/components/TokenCounter'
++import { OpenMontagePermissionSelector } from '@/components/OpenMontagePermissionSelector'
+@@ -2232,0 +2234 @@ const ChatInput = memo(function ChatInput({
++              <OpenMontagePermissionSelector conversationId={currentThreadId} />
+
+diff --git a/web-app/src/hooks/useAssistant.ts b/web-app/src/hooks/useAssistant.ts
+index c2d44b60ff7537a5726713cd838cf39f1a79d68f..e9b03226379918f17a7163b90133b8351e2cce48 100644
+--- a/web-app/src/hooks/useAssistant.ts
++++ b/web-app/src/hooks/useAssistant.ts
+@@ -31,2 +31,2 @@ export const defaultAssistant: Assistant = {
+-  id: 'jan',
+-  name: 'Jan',
++  id: 'openmontage',
++  name: 'OpenMontage',
+@@ -41,20 +41,2 @@ export const defaultAssistant: Assistant = {
+-  description:
+-    "Jan is a helpful desktop assistant that can reason through complex tasks and use tools to complete them on the user's behalf.",
+-  instructions: `You must output your response in the exact language used in the latest user message. Do not provide translations or switch languages unless explicitly instructed to do so. If the input is mostly English, respond in English.
+-
+-When handling user queries:
+-
+-1. Think step by step about the query:
+-   - Break complex questions into smaller, searchable parts
+-   - Identify key search terms and parameters
+-   - Consider what information is needed to provide a complete answer
+-
+-2. Mandatory logical analysis:
+-   - Before engaging any tools, articulate your complete thought process in natural language. You must act as a "professional tool caller," demonstrating rigorous logic.
+-   - Analyze the information gap: explicitly state what data is missing.
+-   - Derive the strategy: explain why a specific tool is the logical next step.
+-   - Justify parameters: explain why you chose those specific search keywords or that specific URL.
+-
+-You have tools to search for and access real-time, up-to-date data. Use them. Search before stating that you can't or don't know.
+-
+-Current date: {{current_date}}`,
++  description: 'Local video editing and production assistant',
++  instructions: `Reply in the language of the user's latest message. Read AGENT_GUIDE.md and the applicable pipeline manifest before production work. Follow every pipeline stage, checkpoint, quality gate, approval, provenance, and decision-log contract. Accept mixed local materials and use public URLs only through the controlled local import tool. Read skills/creative/references/editorial-principles.md before editing and apply its attributed practical guidance from Walter Murch, Karen Pearlman, Karel Reisz and Gavin Millar, Edward Dmytryk, and Michael Ondaatje. Respect the current Auto, Confirm, or Read-only permission mode.`,
+
+diff --git a/web-app/src/hooks/useModelProvider.ts b/web-app/src/hooks/useModelProvider.ts
+index 32ac9941d88b04c38f6170facb9960e6d775bc0e..425042b8dc504d8aa4d3a88373fd149e1470966b 100644
+--- a/web-app/src/hooks/useModelProvider.ts
++++ b/web-app/src/hooks/useModelProvider.ts
+@@ -38,2 +38,2 @@ export const useModelProvider = create<ModelProviderState>()(
+-      selectedProvider: 'llamacpp',
+-      selectedModel: null,
++      selectedProvider: 'openmontage-ollama',
++      selectedModel: { id: 'openmontage-gpt-oss:20b-32k', name: 'OpenMontage Local', displayName: 'OpenMontage Local', capabilities: ['tools'] },
+
+diff --git a/web-app/src/routes/index.tsx b/web-app/src/routes/index.tsx
+index 6f6026d704a78b38a4898b9103b20b779e4ad6e2..4d4ce86474982fbcd89063c45a2ac56106e44a89 100644
+--- a/web-app/src/routes/index.tsx
++++ b/web-app/src/routes/index.tsx
+@@ -79 +79 @@ function Index() {
+-          <DropdownModelProvider model={threadModel} />
++          <span className="text-sm font-medium">OpenMontage Local</span>
+
+diff --git a/web-app/src/routes/project/$projectId.tsx b/web-app/src/routes/project/$projectId.tsx
+index a7a840b22e30e1d2b9cf88edbc32dbd97be952bb..0c002e78ae9c543030f78e38a8a7a5a0208563da 100644
+--- a/web-app/src/routes/project/$projectId.tsx
++++ b/web-app/src/routes/project/$projectId.tsx
+@@ -92 +92 @@ function ProjectPageContent() {
+-          <DropdownModelProvider />
++          <span className="text-sm font-medium">OpenMontage Local</span>
+
+diff --git a/web-app/src/routes/threads/$threadId.tsx b/web-app/src/routes/threads/$threadId.tsx
+index 5836f1f1b3d8fb6237a2bf991d38cb8914ca3b24..5adbd4e4125e7c16861a93d7b6ebeba39a1f0c54 100644
+--- a/web-app/src/routes/threads/$threadId.tsx
++++ b/web-app/src/routes/threads/$threadId.tsx
+@@ -1101 +1101 @@ function ThreadDetail() {
+-          <DropdownModelProvider model={threadModel} />
++          <span className="text-sm font-medium">OpenMontage Local</span>
+
+diff --git a/web-app/src/services/mcp/tauri.ts b/web-app/src/services/mcp/tauri.ts
+index da13ea10e2fe3f3e7f569c8bf40de7ddc19664a3..e0bd5543321e2a2e8e9f81b75cac263a3bd15695 100644
+--- a/web-app/src/services/mcp/tauri.ts
++++ b/web-app/src/services/mcp/tauri.ts
+@@ -10,0 +11,10 @@ import { DefaultMCPService } from './default'
++import { openMontageContextFor } from '@/stores/openmontage-permission-store'
++
++function withOpenMontageContext<T extends { serverName?: string; arguments: object }>(args: T): T {
++  if (args.serverName !== 'OpenMontage') return args
++  const values = args.arguments as Record<string, unknown>
++  const provided = values._openmontage_context as { conversation_id?: string } | undefined
++  const conversationId = provided?.conversation_id ?? window.location.pathname.split('/threads/')[1]?.split('/')[0]
++  if (!conversationId) return args
++  return { ...args, arguments: { ...values, _openmontage_context: openMontageContextFor(conversationId) } }
++}
+@@ -81 +91 @@ export class TauriMCPService extends DefaultMCPService {
+-    return window.core?.api?.callTool(args)
++    return window.core?.api?.callTool(withOpenMontageContext(args))
+@@ -99 +109 @@ export class TauriMCPService extends DefaultMCPService {
+-      ...args,
++      ...withOpenMontageContext(args),
+
+diff --git a/web-app/src/services/providers/tauri.ts b/web-app/src/services/providers/tauri.ts
+index b4d894334949512240560b2874eb2f52a67aa789..92ac12ed93a795282ae475168d6c726962ce2a25 100644
+--- a/web-app/src/services/providers/tauri.ts
++++ b/web-app/src/services/providers/tauri.ts
+@@ -23,0 +24,7 @@ export class TauriProvidersService extends DefaultProvidersService {
++      if (IS_TAURI) {
++        return [{ active: true, provider: 'openmontage-ollama', api_key: 'ollama-local',
++          base_url: 'http://127.0.0.1:11434/v1', settings: [], models: [{
++            id: 'openmontage-gpt-oss:20b-32k', name: 'OpenMontage Local',
++            displayName: 'OpenMontage Local', capabilities: ['tools'],
++          }] }]
++      }
+
+diff --git a/web-app/src/stores/openmontage-permission-store.ts b/web-app/src/stores/openmontage-permission-store.ts
+new file mode 100644
+index 0000000000000000000000000000000000000000..57ab9d6fc208421e5f212b890fd5c9a7a2e3a30b
+--- /dev/null
++++ b/web-app/src/stores/openmontage-permission-store.ts
+@@ -0,0 +1,35 @@
++import { create } from 'zustand'
++import { persist, createJSONStorage } from 'zustand/middleware'
++
++export type OpenMontagePermissionMode = 'auto' | 'confirm' | 'read_only'
++export type OpenMontageContext = { conversation_id: string; thread_revision: number; nonce: string }
++type ConversationState = { mode: OpenMontagePermissionMode; context: OpenMontageContext }
++type State = {
++  conversations: Record<string, ConversationState>
++  ensureConversation: (id: string) => ConversationState
++  updateConversation: (id: string, update: Partial<ConversationState>) => void
++  contextFor: (id: string) => OpenMontageContext
++}
++const initial = (id: string): ConversationState => ({
++  mode: 'confirm', context: { conversation_id: id, thread_revision: 0, nonce: `jan-${id}` },
++})
++export const useOpenMontagePermissionStore = create<State>()(persist((set, get) => ({
++  conversations: {},
++  ensureConversation: (id) => {
++    const found = get().conversations[id]
++    if (found) return found
++    const created = initial(id)
++    set((state) => ({ conversations: { ...state.conversations, [id]: created } }))
++    return created
++  },
++  updateConversation: (id, update) => set((state) => ({
++    conversations: { ...state.conversations, [id]: { ...(state.conversations[id] ?? initial(id)), ...update } },
++  })),
++  contextFor: (id) => get().conversations[id]?.context ?? initial(id).context,
++}), {
++  name: 'openmontage-permission-state',
++  storage: createJSONStorage(() => localStorage),
++  partialize: (state) => ({ conversations: state.conversations }),
++}))
++export const openMontageContextFor = (id: string) =>
++  useOpenMontagePermissionStore.getState().contextFor(id)
