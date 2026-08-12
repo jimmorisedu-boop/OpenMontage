@@ -3,72 +3,89 @@ param([switch]$PlanOnly)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$python = Join-Path $repoRoot '.venv\Scripts\python.exe'
-if (-not (Test-Path -LiteralPath $python)) {
-    throw 'Repository Python environment is missing. Restore the portable .venv first.'
+$runtime = Join-Path $repoRoot 'runtime'
+$downloads = Join-Path $runtime 'downloads'
+$artifacts = Get-Content -Raw (Join-Path $repoRoot 'config\runtime\artifacts.json') | ConvertFrom-Json
+
+$paths = [ordered]@{
+    jan = Join-Path $repoRoot 'runtime\jan\Jan.exe'
+    python = Join-Path $repoRoot 'runtime\python\python.exe'
+    ollama = Join-Path $repoRoot 'runtime\ollama\ollama.exe'
+    ffmpeg = Join-Path $repoRoot 'runtime\ffmpeg\ffmpeg.exe'
+    ffprobe = Join-Path $repoRoot 'runtime\ffmpeg\ffprobe.exe'
+    ytdlp = Join-Path $repoRoot 'runtime\downloader\yt-dlp.exe'
+    models = Join-Path $repoRoot 'runtime\models'
+    logs = Join-Path $repoRoot 'runtime\logs'
 }
-
-$layoutJson = & $python -m scripts.portable_runtime_layout --root $repoRoot
-if ($LASTEXITCODE -ne 0) { throw 'Failed to resolve the portable runtime layout.' }
-$layout = $layoutJson | ConvertFrom-Json
-
 $plan = [ordered]@{
-    runtime_root = [string]$layout.runtime_root
-    models_to_pull = @('gpt-oss:20b', 'qwen3.5:9b')
-    profile_to_create = [string]$layout.orchestrator_model
-    source_tags_to_remove = @('gpt-oss:20b')
-    codex_app_model = [string]$layout.orchestrator_model
-    portable_tools = @('ollama', 'ffmpeg', 'ffprobe')
+    runtime_root = $runtime
+    visible_model = 'openmontage-gpt-oss:20b-32k'
+    hidden_vision_model = 'qwen3.5:9b'
+    downloads = @('Jan', 'Python', 'Ollama', 'FFmpeg', 'yt-dlp', 'gpt-oss:20b', 'qwen3.5:9b')
 }
-if ($PlanOnly) {
-    $plan | ConvertTo-Json -Compress
-    exit 0
-}
+if ($PlanOnly) { $plan | ConvertTo-Json -Compress; exit 0 }
 
-$ollamaDir = Split-Path -Parent $layout.ollama_exe
-$ffmpegDir = Split-Path -Parent $layout.ffmpeg_exe
-$downloadDir = Join-Path $layout.runtime_root 'downloads'
-New-Item -ItemType Directory -Path $ollamaDir, $ffmpegDir, $layout.models_dir, $layout.logs_dir, $downloadDir -Force | Out-Null
+New-Item -ItemType Directory -Force -Path $runtime, $downloads, $paths.models, $paths.logs | Out-Null
 
-foreach ($toolName in @('ffmpeg', 'ffprobe')) {
-    $target = if ($toolName -eq 'ffmpeg') { [string]$layout.ffmpeg_exe } else { [string]$layout.ffprobe_exe }
-    if (-not (Test-Path -LiteralPath $target)) {
-        $source = Get-Command $toolName -CommandType Application -ErrorAction SilentlyContinue
-        if (-not $source) { throw "$toolName is required once so it can be copied into the portable runtime." }
-        Copy-Item -LiteralPath $source.Source -Destination $target
+function Get-VerifiedArtifact([object]$artifact) {
+    $name = if ($artifact.archive) { [string]$artifact.archive } else { Split-Path -Leaf ([string]$artifact.portable_url) }
+    $url = if ($artifact.url) { [string]$artifact.url } else { [string]$artifact.portable_url }
+    $expected = if ($artifact.sha256) { [string]$artifact.sha256 } else { [string]$artifact.portable_sha256 }
+    $target = Join-Path $downloads $name
+    $valid = (Test-Path -LiteralPath $target) -and ((Get-FileHash -Algorithm SHA256 -LiteralPath $target).Hash.ToLowerInvariant() -eq $expected.ToLowerInvariant())
+    if (-not $valid) {
+        Write-Host "Downloading verified artifact: $name"
+        & curl.exe --fail --location --retry 3 --continue-at - --output $target $url
+        if ($LASTEXITCODE -ne 0) { throw "Download failed: $name" }
     }
+    $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $target).Hash.ToLowerInvariant()
+    if ($actual -ne $expected.ToLowerInvariant()) { throw "Checksum mismatch: $name" }
+    return $target
 }
 
-if (-not (Test-Path -LiteralPath $layout.ollama_exe)) {
-    Write-Host 'Resolving the official standalone Ollama release...'
-    $headers = @{ Accept = 'application/vnd.github+json'; 'User-Agent' = 'OpenMontage-Portable-Setup' }
-    $release = Invoke-RestMethod -Headers $headers -Uri 'https://api.github.com/repos/ollama/ollama/releases/latest'
-    $asset = $release.assets | Where-Object name -eq 'ollama-windows-amd64.zip' | Select-Object -First 1
-    if (-not $asset) { throw 'The official standalone Ollama asset was not found.' }
-
-    $archive = Join-Path $downloadDir $asset.name
-    if (-not (Test-Path -LiteralPath $archive) -or (Get-Item -LiteralPath $archive).Length -ne $asset.size) {
-        Write-Host "Downloading Ollama $($release.tag_name) into the portable runtime..."
-        & curl.exe --fail --location --continue-at - --output $archive $asset.browser_download_url
-        if ($LASTEXITCODE -ne 0) { throw "Ollama download failed with exit code $LASTEXITCODE." }
-    }
-    if ((Get-Item -LiteralPath $archive).Length -ne $asset.size) { throw 'Downloaded Ollama archive size does not match the release metadata.' }
-    if ($asset.digest -and $asset.digest.StartsWith('sha256:')) {
-        $expectedHash = $asset.digest.Substring(7)
-        $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $archive).Hash.ToLowerInvariant()
-        if ($actualHash -ne $expectedHash.ToLowerInvariant()) { throw 'Downloaded Ollama archive checksum is invalid.' }
-    }
-
-    Write-Host 'Extracting portable Ollama...'
-    Expand-Archive -LiteralPath $archive -DestinationPath $ollamaDir -Force
-    if (-not (Test-Path -LiteralPath $layout.ollama_exe)) { throw 'The Ollama archive did not contain ollama.exe at the expected location.' }
-    Remove-Item -LiteralPath $archive -Force
+if (-not (Test-Path -LiteralPath $paths.jan)) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $paths.jan) | Out-Null
+    Copy-Item -LiteralPath (Get-VerifiedArtifact $artifacts.jan) -Destination $paths.jan
 }
 
-$env:PATH = "$ollamaDir;$ffmpegDir;$env:PATH"
-$env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+if (-not (Test-Path -LiteralPath $paths.python)) {
+    $pythonDir = Split-Path $paths.python
+    New-Item -ItemType Directory -Force -Path $pythonDir | Out-Null
+    Expand-Archive -LiteralPath (Get-VerifiedArtifact $artifacts.python) -DestinationPath $pythonDir -Force
+    $pth = Get-ChildItem -LiteralPath $pythonDir -Filter 'python*._pth' | Select-Object -First 1
+    if (-not $pth) { throw 'Portable Python path configuration was not found.' }
+    $content = (Get-Content -Raw $pth.FullName).Replace('#import site', 'import site')
+    Set-Content -LiteralPath $pth.FullName -Value $content -Encoding ascii
+    & $paths.python (Get-VerifiedArtifact $artifacts.get_pip) --disable-pip-version-check --no-warn-script-location
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to bootstrap pip in portable Python.' }
+}
+& $paths.python -m pip install --disable-pip-version-check --no-warn-script-location -r (Join-Path $repoRoot 'config\runtime\requirements-portable.txt')
+if ($LASTEXITCODE -ne 0) { throw 'Failed to install the portable local Python dependencies.' }
+
+if (-not (Test-Path -LiteralPath $paths.ollama)) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $paths.ollama) | Out-Null
+    Expand-Archive -LiteralPath (Get-VerifiedArtifact $artifacts.ollama) -DestinationPath (Split-Path $paths.ollama) -Force
+}
+if (-not (Test-Path -LiteralPath $paths.ffmpeg) -or -not (Test-Path -LiteralPath $paths.ffprobe)) {
+    $stage = Join-Path $runtime 'ffmpeg-stage'
+    New-Item -ItemType Directory -Force -Path $stage, (Split-Path $paths.ffmpeg) | Out-Null
+    Expand-Archive -LiteralPath (Get-VerifiedArtifact $artifacts.ffmpeg) -DestinationPath $stage -Force
+    foreach ($name in @('ffmpeg.exe', 'ffprobe.exe')) {
+        $source = Get-ChildItem -LiteralPath $stage -Recurse -Filter $name | Select-Object -First 1
+        if (-not $source) { throw "$name was not found in the verified FFmpeg archive." }
+        Copy-Item -LiteralPath $source.FullName -Destination (Join-Path (Split-Path $paths.ffmpeg) $name)
+    }
+    Remove-Item -LiteralPath $stage -Recurse -Force
+}
+if (-not (Test-Path -LiteralPath $paths.ytdlp)) {
+    New-Item -ItemType Directory -Force -Path (Split-Path $paths.ytdlp) | Out-Null
+    Copy-Item -LiteralPath (Get-VerifiedArtifact $artifacts.yt_dlp) -Destination $paths.ytdlp
+}
+
+$env:PATH = "$(Split-Path $paths.ollama);$(Split-Path $paths.ffmpeg);$env:PATH"
 $env:OLLAMA_HOST = '127.0.0.1:11434'
-$env:OLLAMA_MODELS = [string]$layout.models_dir
+$env:OLLAMA_BASE_URL = 'http://127.0.0.1:11434'
+$env:OLLAMA_MODELS = $paths.models
 $env:OLLAMA_NO_CLOUD = '1'
 $env:NO_PROXY = '127.0.0.1,localhost,::1'
 $env:OLLAMA_CONTEXT_LENGTH = '32768'
@@ -77,51 +94,33 @@ $env:OLLAMA_NUM_PARALLEL = '1'
 $env:OLLAMA_FLASH_ATTENTION = '1'
 
 function Test-LocalOllama {
-    try {
-        Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 2 | Out-Null
-        return $true
-    } catch {
-        return $false
-    }
+    try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 2 | Out-Null; return $true } catch { return $false }
 }
-
 if (-not (Test-LocalOllama)) {
-    $stdoutLog = Join-Path $layout.logs_dir 'ollama-server.stdout.log'
-    $stderrLog = Join-Path $layout.logs_dir 'ollama-server.stderr.log'
-    $server = Start-Process -FilePath $layout.ollama_exe -ArgumentList 'serve' `
-        -WorkingDirectory $layout.runtime_root -WindowStyle Hidden `
-        -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
-    $ready = $false
-    for ($attempt = 0; $attempt -lt 60; $attempt++) {
-        Start-Sleep -Milliseconds 500
-        if (Test-LocalOllama) { $ready = $true; break }
+    $server = Start-Process -FilePath $paths.ollama -ArgumentList 'serve' -WorkingDirectory $runtime -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $paths.logs 'ollama-server.stdout.log') `
+        -RedirectStandardError (Join-Path $paths.logs 'ollama-server.stderr.log') -PassThru
+    for ($attempt = 0; $attempt -lt 120 -and -not (Test-LocalOllama); $attempt++) {
         if ($server.HasExited) { break }
+        Start-Sleep -Milliseconds 500
     }
-    if (-not $ready) { throw "Portable Ollama did not start. Read $stderrLog" }
+    if (-not (Test-LocalOllama)) { throw "Portable Ollama did not start. Read $($paths.logs)" }
 }
 
-foreach ($model in $plan.models_to_pull) {
+foreach ($model in @('gpt-oss:20b', 'qwen3.5:9b')) {
     Write-Host "Downloading fixed local model: $model"
-    & $layout.ollama_exe pull $model
+    & $paths.ollama pull $model
     if ($LASTEXITCODE -ne 0) { throw "Model download failed: $model" }
 }
-
-$modelFile = Join-Path $repoRoot 'config\ollama\gpt-oss-20b-32k.Modelfile'
-& $layout.ollama_exe create $layout.orchestrator_model -f $modelFile
+& $paths.ollama create 'openmontage-gpt-oss:20b-32k' -f (Join-Path $repoRoot 'config\ollama\gpt-oss-20b-32k.Modelfile')
 if ($LASTEXITCODE -ne 0) { throw 'Failed to create the fixed 32K orchestration profile.' }
+& $paths.ollama rm 'gpt-oss:20b' | Out-Null
 
-foreach ($sourceTag in $plan.source_tags_to_remove) {
-    & $layout.ollama_exe rm $sourceTag
-    if ($LASTEXITCODE -ne 0) { throw "Failed to hide the source model tag: $sourceTag" }
-}
-
-$env:OPENMONTAGE_OFFLINE = '1'
-& $python -m scripts.local_agent_preflight --root $repoRoot
+& $paths.python (Join-Path $repoRoot 'scripts\seed_jan_profile.py') --root $repoRoot
+if ($LASTEXITCODE -ne 0) { throw 'Failed to seed the portable Jan profile.' }
+$env:OPENMONTAGE_NETWORK_MODE = 'url-import-only'
+& $paths.python -m scripts.openmontage_preflight --root $repoRoot
 if ($LASTEXITCODE -ne 0) { throw 'Portable runtime preflight failed after setup.' }
 
-& $layout.ollama_exe launch $layout.codex_integration --model $plan.codex_app_model --config --yes
-if ($LASTEXITCODE -ne 0) { throw 'Failed to configure Codex Desktop for the fixed local model.' }
-
 Write-Host ''
-Write-Host 'Portable OpenMontage runtime is ready.'
-Write-Host 'Use START_OFFLINE_EDITOR.bat from now on.'
+Write-Host 'Portable OpenMontage is ready. Double-click START_OPENMONTAGE.bat.'
