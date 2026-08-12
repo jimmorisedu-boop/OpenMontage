@@ -64,6 +64,9 @@ def test_jan_patch_contains_the_openmontage_chat_shell_contract():
         "set_permission_mode",
         "runtime/python/python.exe",
         "scripts.openmontage_mcp.server",
+        "Auto updater is disabled",
+        "web-app/src/providers/AnalyticProvider.tsx",
+        "web-app/src/containers/analytics/PromptAnalytic.tsx",
     ]
     for marker in required_markers:
         assert marker in patch
@@ -79,6 +82,11 @@ def test_jan_patch_contains_the_openmontage_chat_shell_contract():
     )
     for marker in forbidden_online_defaults:
         assert marker not in added_lines
+
+    assert "posthog.init" not in added_lines
+    assert "getServiceHub().updater().check()" not in "\n".join(
+        line for line in added_lines.splitlines() if "AUTO_UPDATER_DISABLED" in line
+    )
 
 
 def test_hosted_builder_produces_a_hashed_portable_executable():
