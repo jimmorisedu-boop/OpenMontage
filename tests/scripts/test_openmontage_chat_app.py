@@ -1,5 +1,7 @@
 from pathlib import Path
+import time
 
+import pytest
 from fastapi.testclient import TestClient
 
 from scripts.openmontage_chat.app import DesktopApi, create_app, parse_model_response
@@ -148,6 +150,68 @@ def test_model_response_preserves_plain_text_as_the_answer():
         "answer": "Обычный ответ модели",
         "summary": [],
     }
+
+
+def test_shell_has_accessible_live_status_and_inline_errors(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    assert 'aria-live="polite"' in html
+    assert 'aria-label="Режим работы"' in html
+    assert '<label for="prompt"' in html
+    assert 'id="inline-error"' in html
+    assert "alert(" not in html
+    assert 'aria-busy' in html
+
+
+def test_shell_uses_active_ids_custom_answers_and_truthful_operations(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    assert "question_set_id" in html
+    assert "plan_id" in html
+    assert "operation_id" in html
+    assert "operation_status" in html
+    assert "cancel_operation" in html
+    assert "Другой ответ" in html
+    assert "entry.status==='completed'?'✓'" in html
+    assert "open_artifact(active.project_id,a.artifact_id)" in html
+
+
+def test_shell_scopes_answers_to_project_and_disables_stale_cards(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    assert "answersByProject" in html
+    assert "entry.active===false" in html
+    assert "submit.disabled" in html
+    assert "go.disabled" in html
+
+
+def test_native_approval_returns_background_operation_and_enforces_mode(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Background")
+    saved = api.store.save_plan(project["project_id"], {"pipeline": "fixture", "steps": []}, mode="confirm")
+    api.orchestrator.approve_plan = lambda project_id, plan_id, mode, control: (time.sleep(0.08), {"project_id": project_id, "status": "ready"})[1]
+
+    started = time.monotonic()
+    response = api.approve_plan(project["project_id"], saved["plan_id"], "confirm")
+
+    assert time.monotonic() - started < 0.05
+    assert response["operation"]["status"] in {"queued", "running"}
+    with pytest.raises(PermissionError, match="только чтение"):
+        api.approve_plan(project["project_id"], saved["plan_id"], "read_only")
+
+
+def test_auto_submit_starts_the_same_background_operation(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Auto")
+    saved = api.store.save_plan(project["project_id"], {"pipeline": "fixture", "steps": []}, mode="auto")
+    api.orchestrator.submit = lambda project_id, message, mode: api.store.load(project_id)
+    calls = []
+    api.approve_plan = lambda project_id, plan_id, mode: calls.append((project_id, plan_id, mode)) or {"project": api._project_state(project_id)}
+
+    result = api.submit(project["project_id"], "Делай", "auto")
+
+    assert calls == [(project["project_id"], saved["plan_id"], "auto")]
+    assert result["project_id"] == project["project_id"]
 
 
 def test_chat_api_returns_structured_summary(tmp_path: Path):

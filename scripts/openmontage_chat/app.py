@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from lib.input_manifest import InputPriority, register_inputs
 from scripts.openmontage_chat.project_store import ProjectStore
+from scripts.openmontage_chat.operation_manager import OperationManager
 
 
 MODEL = "openmontage-gpt-oss:20b-32k"
@@ -87,6 +88,7 @@ class DesktopApi:
         self.ollama_chat = ollama_chat or _ollama_chat
         self.file_picker = file_picker or (lambda: [])
         self.store = ProjectStore(self.root)
+        self.operations = OperationManager(self.root / "runtime" / "chat-data")
         from scripts.openmontage_chat.orchestrator import LocalOrchestrator
         self.orchestrator = LocalOrchestrator(self.root, store=self.store, model_chat=self.ollama_chat)
         self.active_project_id: str | None = None
@@ -95,6 +97,7 @@ class DesktopApi:
         state = self.store.load(project_id)
         manifest = Path(state["project_root"]) / "artifacts" / "input_manifest.json"
         state["input_manifest"] = json.loads(manifest.read_text(encoding="utf-8"))
+        state["operations"] = self.operations.list(project_id)
         return state
 
     def bootstrap(self) -> dict[str, Any]:
@@ -140,10 +143,20 @@ class DesktopApi:
         return payload
 
     def submit(self, project_id: str, message: str, mode: str = "confirm") -> dict[str, Any]:
-        return self._project_state(self.orchestrator.submit(project_id, message, mode)["project_id"])
+        result = self.orchestrator.submit(project_id, message, mode)
+        plan = result.get("plan") or {}
+        if mode == "auto" and result.get("status") == "awaiting_approval" and plan.get("plan_id"):
+            return self.approve_plan(project_id, plan["plan_id"], mode)["project"]
+        return self._project_state(result["project_id"])
 
-    def answer_questions(self, project_id: str, answers: dict[str, str], mode: str = "confirm") -> dict[str, Any]:
-        self.store.update_brief(project_id, answers, questions=[])
+    def answer_questions(self, project_id: str, question_set_id: str | dict[str, str], answers: dict[str, str] | str | None = None, mode: str = "confirm") -> dict[str, Any]:
+        if isinstance(question_set_id, dict):
+            legacy_answers = question_set_id
+            legacy_mode = answers if isinstance(answers, str) else mode
+            question_set_id = self.store.load(project_id)["brief"].get("question_set_id")
+            answers, mode = legacy_answers, legacy_mode
+        assert isinstance(answers, dict)
+        self.store.answer_questions(project_id, str(question_set_id or ""), answers)
         summary = "; ".join(f"{key}: {value}" for key, value in answers.items())
         return self.submit(project_id, "Ответы на уточнения: " + summary, mode)
 
@@ -152,8 +165,33 @@ class DesktopApi:
         selected = [key for key, enabled in choices.items() if enabled]
         return self.submit(project_id, "Выбранные улучшения: " + (", ".join(selected) or "без дополнительных улучшений"), mode)
 
-    def approve_plan(self, project_id: str) -> dict[str, Any]:
-        return self._project_state(self.orchestrator.approve_plan(project_id)["project_id"])
+    def approve_plan(self, project_id: str, plan_id: str | None = None, mode: str = "confirm") -> dict[str, Any]:
+        plan = self.store.load(project_id).get("plan") or {}
+        active_plan_id = plan_id or plan.get("plan_id")
+        self.store.require_active_plan(project_id, str(active_plan_id or ""), mode=mode)
+        self.store.resolve_plan(project_id, str(active_plan_id), "running")
+        operation = self.operations.start(
+            project_id, str(active_plan_id),
+            lambda control: self.orchestrator.approve_plan(project_id, str(active_plan_id), mode, control),
+        )
+        return {"operation": operation, "project": self._project_state(project_id)}
+
+    def operation_status(self, operation_id: str) -> dict[str, Any]:
+        operation = self.operations.get(operation_id)
+        return {"operation": operation, "project": self._project_state(operation["project_id"])}
+
+    def cancel_operation(self, operation_id: str) -> dict[str, Any]:
+        return self.operations.cancel(operation_id)
+
+    def resume_operation(self, operation_id: str) -> dict[str, Any]:
+        operation = self.operations.get(operation_id)
+        resumed = self.operations.resume(
+            operation_id,
+            lambda control: self.orchestrator.approve_plan(
+                operation["project_id"], operation["plan_id"], "auto", control,
+            ),
+        )
+        return {"operation": resumed, "project": self._project_state(operation["project_id"])}
 
     def create_version(self, project_id: str) -> dict[str, Any]:
         self.store.create_version(project_id)
@@ -164,8 +202,8 @@ class DesktopApi:
         subprocess.Popen(["explorer.exe", str(path)])
         return {"ok": True, "path": str(path)}
 
-    def open_artifact(self, project_id: str, path: str) -> dict[str, Any]:
-        artifact = self.store.verify_artifact(project_id, path)
+    def open_artifact(self, project_id: str, artifact_id: str) -> dict[str, Any]:
+        artifact = self.store.get_artifact(project_id, artifact_id)
         subprocess.Popen(["explorer.exe", artifact["path"]])
         return {"ok": True, "artifact": artifact}
 

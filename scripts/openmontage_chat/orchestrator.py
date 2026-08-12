@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 import jsonschema
+import yaml
 
 from scripts.openmontage_chat.app import MODEL, _ollama_chat
 from scripts.openmontage_chat.project_store import ProjectStore
@@ -24,7 +25,9 @@ SYSTEM_INSTRUCTIONS = """Ты — локальный оркестратор Open
 напряжение и разрядку; сохраняй сильную игру и реакции; при сомнении сравни варианты и пересматривай целое.
 Верни только JSON с полями intent, confidence, known_brief, questions, enhancements, ready_to_plan, response, approach_summary, plan.
 approach_summary — до четырёх коротких полезных выводов без скрытых рассуждений.
-Plan: pipeline, summary, steps[{tool,label,params}]. Question: question_id,text,choices[{value,label,recommended}],blocking.
+Plan: pipeline, stage, summary, expected_artifacts[{key,path,required}], steps[{tool,label,params}].
+Stage must be an actual stage from the selected pipeline manifest. Use only that stage's tools_available; never skip directly to compose when earlier canonical stages are incomplete.
+Question: question_id,text,choices[{value,label,recommended}],blocking.
 Enhancement: enhancement_id,label,benefit,cost. Пути output_path должны находиться внутри project_root."""
 
 
@@ -76,6 +79,7 @@ class LocalOrchestrator:
         self.store = store or ProjectStore(self.root)
         self.adapter = adapter or ToolAdapter()
         self.model_chat = model_chat or _ollama_chat
+        self._capability_cache: list[dict[str, Any]] | None = None
 
     @staticmethod
     def _network_allowed(tool: Any) -> bool:
@@ -85,6 +89,8 @@ class LocalOrchestrator:
         return getattr(tool, "name", "") == "url_import_gateway"
 
     def capability_envelope(self) -> list[dict[str, Any]]:
+        if self._capability_cache is not None:
+            return self._capability_cache
         tools = []
         for tool in self.adapter.registry.get_available():
             if not self._network_allowed(tool):
@@ -93,13 +99,29 @@ class LocalOrchestrator:
             tools.append({key: info.get(key) for key in (
                 "name", "capability", "provider", "capabilities", "input_schema", "side_effects", "best_for"
             ) if key in info})
-        return sorted(tools, key=lambda item: item["name"])
+        self._capability_cache = sorted(tools, key=lambda item: item["name"])
+        return self._capability_cache
+
+    def compact_capabilities(self) -> list[dict[str, Any]]:
+        grouped: dict[str, list[str]] = {}
+        for item in self.capability_envelope():
+            grouped.setdefault(str(item.get("capability") or "other"), []).append(item["name"])
+        return [{"capability": key, "tools": sorted(value)} for key, value in sorted(grouped.items())]
+
+    def _pipeline_manifest(self, name: str) -> dict[str, Any]:
+        path = self.root / "pipeline_defs" / f"{name}.yaml"
+        if not path.is_file():
+            raise ValueError(f"Unknown pipeline: {name}")
+        manifest = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        if not isinstance(manifest, dict):
+            raise ValueError(f"Invalid pipeline: {name}")
+        return manifest
 
     def _model_decision(self, state: dict[str, Any], message: str) -> dict[str, Any]:
         context = {
             "project_id": state["project_id"], "project_root": state["project_root"],
             "status": state["status"], "brief": state["brief"], "conversation": state["conversation"][-20:],
-            "input_manifest": self._input_manifest(state), "capability_envelope": self.capability_envelope(),
+            "input_manifest": self._input_manifest(state), "capability_summary": self.compact_capabilities(),
             "pipeline_names": sorted(path.stem for path in (self.root / "pipeline_defs").glob("*.yaml")),
             "user_message": message,
         }
@@ -128,16 +150,22 @@ class LocalOrchestrator:
         manifest = self._input_manifest(state)
         declared_sources = {str(Path(item["path"]).resolve()) for item in manifest.get("inputs", []) if item.get("path")}
         pipeline = str(plan.get("pipeline") or "")
-        if not (self.root / "pipeline_defs" / f"{pipeline}.yaml").is_file():
-            raise ValueError(f"Unknown pipeline: {pipeline}")
+        pipeline_manifest = self._pipeline_manifest(pipeline)
+        stages = pipeline_manifest.get("stages") or []
+        stage_name = str(plan.get("stage") or (stages[0].get("name") if len(stages) == 1 else ""))
+        stage = next((item for item in stages if item.get("name") == stage_name), None)
+        if stages and not stage:
+            raise ValueError(f"Неизвестная стадия pipeline (нет такой стадии): {stage_name}")
         allowed = {item["name"] for item in self.capability_envelope()}
+        if stage is not None:
+            allowed &= set(stage.get("tools_available", []))
         steps = plan.get("steps")
         if not isinstance(steps, list) or not steps:
             raise ValueError("Plan must contain executable steps")
         for step in steps:
             name = str(step.get("tool") or "")
             if name not in allowed:
-                raise ValueError(f"Tool is unavailable or forbidden: {name}")
+                raise ValueError(f"Tool is unavailable or forbidden for this stage: {name}")
             params = step.get("params")
             if not isinstance(params, dict):
                 raise ValueError("Tool params must be an object")
@@ -155,7 +183,24 @@ class LocalOrchestrator:
                     source = str(Path(str(value)).resolve())
                     if source not in declared_sources and not Path(source).is_relative_to(project):
                         raise ValueError(f"Plan references an undeclared source: {source}")
-        return plan
+        expected = plan.get("expected_artifacts")
+        if not isinstance(expected, list) or not expected:
+            expected = []
+            for step in steps:
+                for key, value in step["params"].items():
+                    if key.endswith("output_path") and value:
+                        expected.append({"key": f"{step['tool']}:{key}", "path": str(Path(str(value)).resolve()), "required": True})
+        if not expected:
+            raise ValueError("Plan must declare expected artifacts")
+        validated = {**plan, "stage": stage_name or None, "expected_artifacts": expected}
+        if stage is not None:
+            validated["stage_contract"] = {
+                "name": stage_name, "skill": stage.get("skill"), "produces": list(stage.get("produces", [])),
+                "tools_available": list(stage.get("tools_available", [])),
+                "human_approval_required": bool(stage.get("human_approval_default", False)),
+                "review_focus": list(stage.get("review_focus", [])),
+            }
+        return validated
 
     def submit(self, project_id: str, message: str, mode: str) -> dict[str, Any]:
         self.store.append_entry(project_id, {"role": "user", "type": "text", "text": message})
@@ -167,7 +212,8 @@ class LocalOrchestrator:
         if decision["response"]:
             self.store.append_entry(project_id, {"role": "assistant", "type": "text", "text": decision["response"], "summary": decision["approach_summary"]})
         if questions:
-            self.store.append_entry(project_id, {"role": "assistant", "type": "questions", "questions": questions})
+            question_set = self.store.set_questions(project_id, questions)
+            self.store.append_entry(project_id, {"role": "assistant", "type": "questions", **question_set})
             return self.store.set_status(project_id, "needs_brief")
         if enhancements:
             self.store.append_entry(project_id, {"role": "assistant", "type": "enhancements", "enhancements": enhancements})
@@ -176,19 +222,28 @@ class LocalOrchestrator:
             if mode == "read_only":
                 self.store.append_entry(project_id, {"role": "assistant", "type": "plan", "plan": {**plan, "read_only": True}})
                 return self.store.set_status(project_id, "ready_to_plan")
-            self.store.save_plan(project_id, plan)
+            plan = self.store.save_plan(project_id, plan, mode=mode)
             self.store.append_entry(project_id, {"role": "assistant", "type": "plan", "plan": plan})
-            if mode == "auto":
-                return self.approve_plan(project_id)
             return self.store.load(project_id)
         return self.store.set_status(project_id, "ready_to_plan" if not questions else "needs_brief")
 
-    def approve_plan(self, project_id: str) -> dict[str, Any]:
+    def approve_plan(self, project_id: str, plan_id: str | None = None, mode: str = "confirm", control: Any = None) -> dict[str, Any]:
         state = self.store.load(project_id)
-        plan = self.validate_plan(project_id, state.get("plan") or {})
+        current = state.get("plan") or {}
+        if current.get("plan_id"):
+            plan = self.store.require_active_plan(project_id, plan_id or current["plan_id"], mode=mode, allow_running=True)
+        elif mode == "read_only":
+            raise PermissionError("В режиме только чтение запуск запрещён")
+        else:
+            plan = current
+        plan = self.validate_plan(project_id, plan)
+        self.store.set_expected_artifacts(project_id, plan["expected_artifacts"])
         self.store.set_status(project_id, "running")
         artifacts: list[str] = []
         for index, step in enumerate(plan["steps"]):
+            if control is not None:
+                control.raise_if_cancelled()
+                control.progress(step.get("label") or step["tool"], current=index + 1, total=len(plan["steps"]))
             self.store.append_entry(project_id, {"role": "system", "type": "operation", "status": "running", "label": step.get("label") or step["tool"], "step": index + 1})
             for key, value in step["params"].items():
                 if key.endswith("output_path") and value:
@@ -202,11 +257,8 @@ class LocalOrchestrator:
             for key in ("output", "output_path", "path"):
                 if data.get(key):
                     artifacts.append(str(data[key]))
-        for raw in reversed(artifacts):
-            try:
-                self.store.verify_artifact(project_id, raw)
-                return self.store.load(project_id)
-            except (OSError, ValueError, json.JSONDecodeError):
-                continue
+        verification = self.store.verify_expected_artifacts(project_id)
+        if verification["ready"]:
+            return self.store.load(project_id)
         self.store.append_entry(project_id, {"role": "assistant", "type": "blocker", "text": "Инструменты завершились без проверяемого результата.", "retained_work": artifacts})
         return self.store.set_status(project_id, "needs_attention")

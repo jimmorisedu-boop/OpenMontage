@@ -63,6 +63,19 @@ def _pipeline(root: Path):
     path.write_text("name: documentary-montage\n", encoding="utf-8")
 
 
+def _staged_pipeline(root: Path):
+    path = root / "pipeline_defs" / "fixture-pipeline.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("""name: fixture-pipeline
+stages:
+  - name: compose
+    skill: pipelines/fixture/compose-director
+    produces: [render_report]
+    tools_available: [fixture_writer]
+    human_approval_default: false
+""", encoding="utf-8")
+
+
 def test_decision_parser_bounds_questions_and_improvements():
     value = _decision(
         questions=[{"question_id": str(i), "text": "Q", "choices": [{"value": "a", "label": "A"}, {"value": "b", "label": "B"}]} for i in range(5)],
@@ -234,3 +247,50 @@ def test_read_only_mode_never_saves_or_executes_a_plan(tmp_path: Path):
     assert result["status"] == "ready_to_plan"
     assert result["plan"] is None
     assert adapter.calls == []
+
+
+def test_plan_is_bound_to_manifest_stage_tools_and_expected_outputs(tmp_path: Path):
+    _staged_pipeline(tmp_path)
+    store = ProjectStore(tmp_path)
+    state = store.create("Manifest")
+    output = str(Path(state["project_root"]) / "renders" / "final.txt")
+    orchestrator = LocalOrchestrator(tmp_path, store=store, adapter=FakeAdapter())
+
+    plan = orchestrator.validate_plan(state["project_id"], {
+        "pipeline": "fixture-pipeline", "stage": "compose",
+        "steps": [{"tool": "fixture_writer", "params": {"output_path": output}}],
+        "expected_artifacts": [{"key": "final", "path": output, "required": True}],
+    })
+    assert plan["stage_contract"]["skill"] == "pipelines/fixture/compose-director"
+    assert plan["stage_contract"]["produces"] == ["render_report"]
+
+    with pytest.raises(ValueError, match="стадии"):
+        orchestrator.validate_plan(state["project_id"], {
+            "pipeline": "fixture-pipeline", "stage": "missing",
+            "steps": [{"tool": "fixture_writer", "params": {"output_path": output}}],
+        })
+
+
+def test_approval_requires_active_plan_id_and_every_expected_artifact(tmp_path: Path):
+    _staged_pipeline(tmp_path)
+    store = ProjectStore(tmp_path)
+    state = store.create("All outputs")
+    adapter = FakeAdapter()
+    output = str(Path(state["project_root"]) / "renders" / "final.txt")
+    missing = str(Path(state["project_root"]) / "artifacts" / "report.json")
+    orchestrator = LocalOrchestrator(tmp_path, store=store, adapter=adapter)
+    validated = orchestrator.validate_plan(state["project_id"], {
+        "pipeline": "fixture-pipeline", "stage": "compose",
+        "steps": [{"tool": "fixture_writer", "params": {"output_path": output}}],
+        "expected_artifacts": [
+            {"key": "final", "path": output, "required": True},
+            {"key": "report", "path": missing, "required": True},
+        ],
+    })
+    saved = store.save_plan(state["project_id"], validated, mode="confirm")
+
+    with pytest.raises(ValueError, match="устарел"):
+        orchestrator.approve_plan(state["project_id"], "wrong", "confirm")
+    result = orchestrator.approve_plan(state["project_id"], saved["plan_id"], "confirm")
+    assert result["status"] == "needs_attention"
+    assert result["artifacts_state"]["verified"][0]["path"] == output
