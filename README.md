@@ -683,19 +683,26 @@ OpenMontage works with any AI coding assistant that can read files and execute P
 
 All platform files point to the shared `AGENT_GUIDE.md` (operating guide and agent contract) and `PROJECT_CONTEXT.md` (architecture reference).
 
-### Fully offline text editing
+### Portable local chat editing
 
-OpenMontage can edit supplied local footage with Codex Desktop connected to a repository-local Ollama runtime. The fixed profile uses `openmontage-gpt-oss:20b-32k` for orchestration and `qwen3.5:9b` for bounded semantic review of sampled frames. It blocks URL inputs, remote Ollama endpoints, API/HYBRID tools, cloud fallbacks, web search, downloads, publishing, and package-resolving render paths; strict offline composition uses FFmpeg.
+OpenMontage includes its own patched Jan chat window and repository-local runtime.
+The visible model is fixed to `openmontage-gpt-oss:20b-32k`; `qwen3.5:9b` is a
+hidden sampled-frame reviewer. No Codex installation or system-wide Ollama,
+Python, FFmpeg, or yt-dlp setup is required.
 
-One-time portable setup (requires network access only while downloading the runtime and fixed model artifacts):
+1. With internet available, double-click `SETUP_PORTABLE_RUNTIME.bat` once.
+2. Wait while the checksummed runtime and the two fixed models are stored below
+   `runtime/`.
+3. Double-click `START_OPENMONTAGE.bat` for normal sessions.
 
-1. Double-click `SETUP_PORTABLE_RUNTIME.bat`.
-2. Wait for the standalone Ollama runtime, `gpt-oss:20b`, and `qwen3.5:9b` to finish downloading.
-3. Double-click `START_OFFLINE_EDITOR.bat` for every normal editing session.
-
-The setup stores standalone Ollama, FFmpeg/ffprobe copies, logs, and approximately 19 GB of model weights below the ignored `runtime/` directory. It fixes the Codex Desktop model to `openmontage-gpt-oss:20b-32k`; `qwen3.5:9b` is reserved for sampled-frame review. The source `gpt-oss:20b` tag is removed after the 32K profile is created, so the local model menu contains only the two working entries and no duplicate weights.
-
-`START_OFFLINE_EDITOR.bat` never installs or downloads anything. It starts repository-local Ollama on `127.0.0.1`, disables Ollama Cloud, runs strict offline preflight, and opens the existing Codex Desktop app with the fixed model. See [`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for complete Russian-language workflows and editing prompts.
+Normal chat, analysis, editing, and rendering remain local. The only permitted
+network action is importing a public media URL explicitly supplied by the user;
+the controlled gateway downloads it into the project before local processing.
+Cloud providers, telemetry, updater checks, remote fonts, web search, cookies,
+authenticated downloads, and private-network URLs are excluded. See
+[`docs/LOCAL_TEXT_EDITING_GUIDE.md`](docs/LOCAL_TEXT_EDITING_GUIDE.md) for the
+complete Russian workflow, permission modes, mixed-input examples, and editorial
+guidance.
 
 ---
 
