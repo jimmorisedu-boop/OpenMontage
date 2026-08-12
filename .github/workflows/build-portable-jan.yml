@@ -7,7 +7,6 @@ on:
       - codex/portable-jan-shell
     paths:
       - .github/workflows/build-portable-jan.yml
-      - config/runtime/artifacts.json
       - integrations/jan/**
 
 permissions:
