@@ -95,6 +95,7 @@ $env:OLLAMA_CONTEXT_LENGTH = '32768'
 $env:OLLAMA_MAX_LOADED_MODELS = '1'
 $env:OLLAMA_NUM_PARALLEL = '1'
 $env:OLLAMA_FLASH_ATTENTION = '1'
+$env:OLLAMA_LOAD_TIMEOUT = '15m'
 
 function Test-LocalOllama {
     try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 2 | Out-Null; return $true } catch { return $false }

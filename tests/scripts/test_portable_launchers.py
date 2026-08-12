@@ -41,6 +41,7 @@ def test_launcher_opens_the_patched_jan_window():
     assert "OPENMONTAGE_NETWORK_MODE" in launcher
     assert "url-import-only" in launcher
     assert "OPENMONTAGE_OFFLINE = '1'" not in launcher
+    assert "OLLAMA_LOAD_TIMEOUT = '15m'" in launcher
     assert "Start-Process" in launcher
     assert "jan_exe" in launcher
     assert "codex" not in launcher.lower()

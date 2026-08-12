@@ -33,6 +33,7 @@ $env:OLLAMA_CONTEXT_LENGTH = '32768'
 $env:OLLAMA_MAX_LOADED_MODELS = '1'
 $env:OLLAMA_NUM_PARALLEL = '1'
 $env:OLLAMA_FLASH_ATTENTION = '1'
+$env:OLLAMA_LOAD_TIMEOUT = '15m'
 $env:NO_PROXY = '127.0.0.1,localhost,::1'
 $env:TEMP = [string]$layout.temp_dir
 $env:TMP = [string]$layout.temp_dir
