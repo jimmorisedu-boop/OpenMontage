@@ -15,7 +15,7 @@ def test_handbook_covers_portable_local_workflow_and_examples():
         "раскадровку", "публичную ссылку", "Confirm", "Read-only",
     ]:
         assert phrase in text
-    assert "только локальные инструменты" in text
+    assert "обращаются только к локальным ресурсам" in text
 
 
 def test_playbook_routes_to_requested_books_and_complete_qa():
