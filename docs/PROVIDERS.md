@@ -2,7 +2,7 @@
 
 ## Portable local chat profile
 
-Launch with `START_OPENMONTAGE.bat`. The owned Jan shell, Python, Ollama,
+Launch with `START_OPENMONTAGE.bat`. The owned OpenMontage chat shell, Python, Ollama,
 FFmpeg/ffprobe, yt-dlp, models, state, cache, and logs live under `runtime/`.
 Ollama is restricted to `http://127.0.0.1:11434`, cloud providers are not shown,
 and models are loaded sequentially. The sole network exception is a public media
@@ -12,7 +12,7 @@ Required local components:
 
 - `openmontage-gpt-oss:20b-32k` derived from the locally present `gpt-oss:20b`;
 - `qwen3.5:9b` for sampled-frame review;
-- the patched Jan chat shell and portable Python/MCP runtime.
+- the lightweight OpenMontage chat shell and portable Python/MCP runtime.
 
 Diagnostics:
 

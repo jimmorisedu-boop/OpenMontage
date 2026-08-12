@@ -8,7 +8,6 @@ $downloads = Join-Path $runtime 'downloads'
 $artifacts = Get-Content -Raw (Join-Path $repoRoot 'config\runtime\artifacts.json') | ConvertFrom-Json
 
 $paths = [ordered]@{
-    jan = Join-Path $repoRoot 'runtime\jan\Jan.exe'
     python = Join-Path $repoRoot 'runtime\python\python.exe'
     ollama = Join-Path $repoRoot 'runtime\ollama\ollama.exe'
     ffmpeg = Join-Path $repoRoot 'runtime\ffmpeg\ffmpeg.exe'
@@ -21,7 +20,7 @@ $plan = [ordered]@{
     runtime_root = $runtime
     visible_model = 'openmontage-gpt-oss:20b-32k'
     hidden_vision_model = 'qwen3.5:9b'
-    downloads = @('Jan', 'Python', 'Ollama', 'FFmpeg', 'yt-dlp', 'gpt-oss:20b', 'qwen3.5:9b')
+    downloads = @('Python', 'Ollama', 'FFmpeg', 'yt-dlp', 'gpt-oss:20b', 'qwen3.5:9b')
 }
 if ($PlanOnly) { $plan | ConvertTo-Json -Compress; exit 0 }
 
@@ -41,11 +40,6 @@ function Get-VerifiedArtifact([object]$artifact) {
     $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath $target).Hash.ToLowerInvariant()
     if ($actual -ne $expected.ToLowerInvariant()) { throw "Checksum mismatch: $name" }
     return $target
-}
-
-if (-not (Test-Path -LiteralPath $paths.jan)) {
-    New-Item -ItemType Directory -Force -Path (Split-Path $paths.jan) | Out-Null
-    Copy-Item -LiteralPath (Get-VerifiedArtifact $artifacts.jan) -Destination $paths.jan
 }
 
 if (-not (Test-Path -LiteralPath $paths.python)) {
@@ -120,8 +114,6 @@ foreach ($model in @('gpt-oss:20b', 'qwen3.5:9b')) {
 if ($LASTEXITCODE -ne 0) { throw 'Failed to create the fixed 32K orchestration profile.' }
 & $paths.ollama rm 'gpt-oss:20b' | Out-Null
 
-& $paths.python (Join-Path $repoRoot 'scripts\seed_jan_profile.py') --root $repoRoot
-if ($LASTEXITCODE -ne 0) { throw 'Failed to seed the portable Jan profile.' }
 $env:OPENMONTAGE_NETWORK_MODE = 'url-import-only'
 & $paths.python -m scripts.openmontage_preflight --root $repoRoot
 if ($LASTEXITCODE -ne 0) { throw 'Portable runtime preflight failed after setup.' }

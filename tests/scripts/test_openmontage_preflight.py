@@ -7,7 +7,6 @@ from scripts.openmontage_preflight import OllamaProbe, run_preflight
 
 def _make_runtime(root: Path) -> None:
     for relative in [
-        "runtime/jan/Jan.exe",
         "runtime/python/python.exe",
         "runtime/ollama/ollama.exe",
         "runtime/ffmpeg/ffmpeg.exe",
@@ -51,7 +50,7 @@ def test_preflight_reports_every_missing_local_prerequisite(tmp_path):
     )
     failed = {check.id for check in report.checks if not check.ok}
     assert failed == {
-        "jan", "python", "mcp_sdk", "ollama_binary", "ollama_service",
+        "python", "mcp_sdk", "ollama_binary", "ollama_service",
         "ffmpeg", "ffprobe", "downloader", "models", "context", "runtime_writable",
     }
     assert all(check.remedy for check in report.checks if not check.ok)

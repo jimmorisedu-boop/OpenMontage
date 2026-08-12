@@ -109,7 +109,6 @@ def run_preflight(
     ollama = ollama_probe(path(layout.ollama_exe))
     mcp_ready = python.is_file() and module_probe(python, "mcp")
     checks = [
-        _file_check("jan", "Jan chat shell", path(layout.jan_exe)),
         _file_check("python", "Portable Python", python),
         PreflightCheck(
             "mcp_sdk",

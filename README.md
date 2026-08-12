@@ -685,7 +685,7 @@ All platform files point to the shared `AGENT_GUIDE.md` (operating guide and age
 
 ### Portable local chat editing
 
-OpenMontage includes its own patched Jan chat window and repository-local runtime.
+OpenMontage includes its own lightweight chat window and repository-local runtime. The interface has no assistant, provider, or model selector: the orchestration model is fixed by the product.
 The visible model is fixed to `openmontage-gpt-oss:20b-32k`; `qwen3.5:9b` is a
 hidden sampled-frame reviewer. No Codex installation or system-wide Ollama,
 Python, FFmpeg, or yt-dlp setup is required.
