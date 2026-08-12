@@ -311,11 +311,11 @@ class BaseTool(ABC):
 
     def check_dependencies(self) -> None:
         """Verify all dependencies are installed. Raises DependencyError if not."""
-        if os.environ.get("OPENMONTAGE_OFFLINE") == "1" and (
-            self.runtime in {ToolRuntime.API, ToolRuntime.HYBRID}
-            or self.resource_profile.network_required
-        ):
-            raise DependencyError("Tool is disabled by OPENMONTAGE_OFFLINE=1")
+        from lib.network_policy import current_network_mode, tool_allowed
+
+        mode = current_network_mode()
+        if mode is not None and not tool_allowed(self, mode):
+            raise DependencyError(f"Tool is disabled by network mode {mode.value}")
         for dep in self.dependencies:
             if dep.startswith(("cmd:", "binary:")):
                 prefix = "cmd:" if dep.startswith("cmd:") else "binary:"

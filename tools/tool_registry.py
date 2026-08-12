@@ -270,11 +270,13 @@ class ToolRegistry:
 
         # Skip selectors — they aggregate, they aren't providers themselves
         tools = [t for t in self._tools.values() if t.provider != "selector"]
-        if os.environ.get("OPENMONTAGE_OFFLINE") == "1":
+        from lib.network_policy import current_network_mode, tool_allowed
+
+        network_mode = current_network_mode()
+        if network_mode is not None:
             tools = [
                 t for t in tools
-                if t.runtime.value not in {"api", "hybrid"}
-                and not t.resource_profile.network_required
+                if tool_allowed(t, network_mode)
                 and t.provider not in {"hyperframes"}
                 and t.get_status() == ToolStatus.AVAILABLE
             ]
@@ -465,8 +467,12 @@ class ToolRegistry:
                         f"{entry.get('name')}: {entry.get('resource_profile_note')}"
                     )
 
+        from lib.network_policy import current_network_mode
+
+        network_mode = current_network_mode()
         result = {
-            "offline_mode": os.environ.get("OPENMONTAGE_OFFLINE") == "1",
+            "offline_mode": network_mode is not None and network_mode.value == "strict-offline",
+            "network_mode": network_mode.value if network_mode is not None else "unrestricted",
             "composition_runtimes": comp_runtimes,
             "capabilities": capabilities,
             "setup_offers": setup_offers,
