@@ -70,6 +70,8 @@ def test_hosted_builder_produces_a_hashed_portable_executable():
     assert "$env:GITHUB_PATH" in configure["run"]
     patch_step = next(step for step in job["steps"] if step["name"] == "Apply OpenMontage patch")
     assert patch_step["run"].count("git -C .jan-source apply --unidiff-zero") == 2
+    test_step = next(step for step in job["steps"] if step["name"] == "Test portable runtime patch")
+    assert test_step["run"] == "cargo test --release --lib portable --no-run"
 
 
 def test_build_helper_validates_the_hosted_build_contract():

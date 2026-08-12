@@ -73,7 +73,7 @@ jobs:
       - name: Test portable runtime patch
         shell: pwsh
         working-directory: .jan-source/src-tauri
-        run: cargo test --release --lib portable
+        run: cargo test --release --lib portable --no-run
 
       - name: Package portable executable
         shell: pwsh
