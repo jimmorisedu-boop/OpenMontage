@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0d0e10" />
+    <title>OpenMontage</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      (function () {
+        function showFailure(message) {
+          window.setTimeout(function () {
+            var root = document.getElementById("root");
+            if (!root || root.childElementCount) return;
+            root.innerHTML = '<div style="height:100%;display:grid;place-content:center;padding:32px;background:#0d0d0f;color:#f4f4f5;font:14px/1.5 Segoe UI,sans-serif;text-align:center"><strong style="font-size:18px">Не удалось открыть интерфейс</strong><span style="max-width:560px;margin-top:8px;color:#b5b5bb">' + String(message || "Неизвестная ошибка").replace(/[&<>]/g, function (value) { return {"&":"&amp;","<":"&lt;",">":"&gt;"}[value]; }) + '</span></div>';
+          }, 0);
+        }
+        window.addEventListener("error", function (event) { showFailure(event.message); });
+        window.addEventListener("unhandledrejection", function (event) { showFailure(event.reason && (event.reason.message || event.reason)); });
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
