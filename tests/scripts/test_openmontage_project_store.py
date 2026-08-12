@@ -80,6 +80,22 @@ def test_json_state_is_written_atomically_without_temp_files(tmp_path: Path):
     assert not list(project.rglob("*.tmp"))
 
 
+def test_project_delete_moves_workspace_to_recoverable_trash(tmp_path: Path):
+    store = ProjectStore(tmp_path)
+    first = store.create("Первый")
+    second = store.create("Второй")
+
+    removed = store.delete(first["project_id"])
+
+    assert removed["deleted"] is True
+    assert removed["recoverable"] is True
+    assert Path(removed["trash_path"]).is_dir()
+    assert not Path(first["project_root"]).exists()
+    assert [item["project_id"] for item in store.list()] == [second["project_id"]]
+    with pytest.raises(FileNotFoundError):
+        store.delete(first["project_id"])
+
+
 def test_question_sets_and_plans_have_active_ids_and_reject_stale_actions(tmp_path: Path):
     store = ProjectStore(tmp_path)
     state = store.create("Lifecycle")

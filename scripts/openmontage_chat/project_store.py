@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
 import subprocess
 import uuid
 from datetime import datetime, timezone
@@ -98,6 +99,21 @@ class ProjectStore:
             except (OSError, KeyError, json.JSONDecodeError):
                 continue
         return sorted(items, key=lambda item: item["updated_at"], reverse=True)
+
+    def delete(self, project_id: str) -> dict[str, Any]:
+        """Move a project to app-local trash so an accidental deletion is recoverable."""
+        source = self._dir(project_id)
+        self._marker(project_id)
+        trash_root = (self.root / "runtime" / "chat-data" / "trash" / "projects").resolve()
+        trash_root.mkdir(parents=True, exist_ok=True)
+        destination = trash_root / f"{project_id}-{uuid.uuid4().hex[:8]}"
+        shutil.move(str(source), str(destination))
+        return {
+            "project_id": project_id,
+            "deleted": True,
+            "recoverable": True,
+            "trash_path": str(destination),
+        }
 
     def load(self, project_id: str) -> dict[str, Any]:
         project = self._dir(project_id)

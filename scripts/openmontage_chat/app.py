@@ -122,6 +122,23 @@ class DesktopApi:
         self.store.set_status(project_id, self.store.load(project_id)["status"], title=title.strip() or "Новый монтаж")
         return self._project_state(project_id)
 
+    def delete_project(self, project_id: str) -> dict[str, Any]:
+        active_operations = [
+            item for item in self.operations.list(project_id)
+            if item.get("status") in {"queued", "running", "cancelling"}
+        ]
+        if active_operations:
+            raise RuntimeError("Сначала остановите выполняющуюся операцию проекта")
+        deleted = self.store.delete(project_id)
+        projects = self.store.list()
+        if projects:
+            self.active_project_id = projects[0]["project_id"]
+            active = self._project_state(self.active_project_id)
+        else:
+            active = self.create_project("Новый монтаж")
+            projects = self.store.list()
+        return {"deleted": deleted, "projects": projects, "active_project": active}
+
     def pick_materials(self, project_id: str | None = None) -> dict[str, Any]:
         result = []
         for raw in self.file_picker():

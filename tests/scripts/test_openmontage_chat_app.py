@@ -122,6 +122,18 @@ def test_product_bridge_creates_and_restores_saved_projects(tmp_path: Path):
     assert opened["project_root"].startswith(str(tmp_path / "projects"))
 
 
+def test_native_bridge_deletes_project_and_selects_a_safe_fallback(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    first = api.create_project("Первый")
+    second = api.create_project("Второй")
+
+    result = api.delete_project(second["project_id"])
+
+    assert result["deleted"]["recoverable"] is True
+    assert result["active_project"]["project_id"] == first["project_id"]
+    assert result["projects"] == result["active_project"]["projects"]
+
+
 def test_product_bridge_registers_materials_in_active_project(tmp_path: Path):
     clip = tmp_path / "clip.mp4"
     clip.write_bytes(b"fixture")
@@ -306,6 +318,20 @@ def test_shell_keeps_compact_questions_submittable_and_files_actionable(tmp_path
     ]:
         assert marker in html
     assert 'class="assistant-stream" id="assistant-stream" aria-live=' not in html
+
+
+def test_shell_exposes_project_actions_and_persistent_workspace_splitters(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "project-menu", "rename-project", "delete-project", "deleteProject",
+        "window.pywebview.api.delete_project", "confirm-dialog", "Удалить проект",
+        'class="splitter splitter-left"', 'class="splitter splitter-right"',
+        'class="splitter splitter-timeline"', "setupSplitters", "pointerdown",
+        "setPointerCapture", "openmontage-layout", "localStorage.setItem",
+        "reset-layout", "Сбросить расположение",
+    ]:
+        assert marker in html
 
 
 def test_chat_api_returns_structured_summary(tmp_path: Path):

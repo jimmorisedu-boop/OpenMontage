@@ -33,7 +33,7 @@ def main() -> None:
     html = (Path(__file__).parent / "index.html").read_text(encoding="utf-8")
     webview.create_window(
         "OpenMontage", html=html, js_api=NativeApi(root=args.root),
-        width=1280, height=840, min_size=(820, 620), text_select=True,
+        width=1280, height=840, min_size=(820, 620), resizable=True, text_select=True,
     )
     webview.start(
         gui="edgechromium", private_mode=False,
