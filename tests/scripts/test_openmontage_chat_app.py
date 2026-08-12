@@ -15,22 +15,39 @@ def test_chat_shell_exposes_one_fixed_product_identity(tmp_path: Path):
     assert "assistant-selector" not in html
     assert "provider-selector" not in html
     assert "Добавить материалы" in html
-    assert 'accept="video/*,audio/*,image/*,.pdf,.doc,.docx,.txt,.md,.rtf,.csv,.xlsx,.pptx,.srt,.vtt,.ass,.json,.xml,.edl,.fcpxml,.aaf"' in html
+    assert "window.pywebview.api.pick_materials" in html
+    assert "fetch(" not in html
 
 
 def test_chat_shell_shows_compact_progress_and_collapsed_approach(tmp_path: Path):
     html = TestClient(create_app(root=tmp_path)).get("/").text
 
-    assert "Изучаю материалы" in html
-    assert "Собираю структуру" in html
-    assert "Готовлю ответ" in html
+    assert "Изучаю проект" in html
+    assert "Выбираю инструменты" in html
+    assert "Готовлю следующий шаг" in html
     assert "Как я подошёл к задаче" in html
-    assert "document.createElement('details')" in html
-    assert "item.textContent=" in html
+    assert "node('details'" in html
+    assert "textContent" in html
     assert "startProgress()" in html
     assert "stopProgress()" in html
     assert "fetch(" not in html
     assert "цепочка рассуждений" not in html.lower()
+
+
+def test_chat_shell_is_a_saved_project_product_with_action_cards(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "projects-list", "project-path", "Открыть папку", "Новый монтаж",
+        "question-card", "enhancement-card", "plan-card", "result-card",
+        "Подтвердить и запустить", "Применить", "Пропустить", "Новая версия",
+        "window.pywebview.api.bootstrap()", "window.pywebview.api.answer_questions",
+        "window.pywebview.api.approve_plan", "window.pywebview.api.open_project_folder",
+    ]:
+        assert marker in html
+    assert "model-selector" not in html
+    assert "agent-selector" not in html
+    assert "/home/user" not in html
 
 
 def test_material_picker_keeps_local_paths_without_copying_binary(tmp_path: Path):
@@ -89,6 +106,30 @@ def test_native_bridge_chats_without_fetch(tmp_path: Path):
     assert result["answer"] == "OK"
     assert result["summary"] == []
     assert calls[0]["model"] == "openmontage-gpt-oss:20b-32k"
+
+
+def test_product_bridge_creates_and_restores_saved_projects(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+
+    created = api.create_project("Клиентский ролик")
+    boot = api.bootstrap()
+    opened = api.open_project(created["project_id"])
+
+    assert boot["active_project"]["project_id"] == created["project_id"]
+    assert boot["projects"][0]["title"] == "Клиентский ролик"
+    assert opened["project_root"].startswith(str(tmp_path / "projects"))
+
+
+def test_product_bridge_registers_materials_in_active_project(tmp_path: Path):
+    clip = tmp_path / "clip.mp4"
+    clip.write_bytes(b"fixture")
+    api = DesktopApi(root=tmp_path, file_picker=lambda: [str(clip)], ollama_chat=lambda payload: {})
+    project = api.create_project("Материалы")
+
+    result = api.pick_materials(project["project_id"])
+
+    assert result["materials"][0]["path"] == str(clip.resolve())
+    assert result["project"]["input_manifest"]["inputs"][0]["path"] == str(clip.resolve())
 
 
 def test_model_response_extracts_a_bounded_approach_summary():

@@ -13,6 +13,9 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
+from lib.input_manifest import InputPriority, register_inputs
+from scripts.openmontage_chat.project_store import ProjectStore
+
 
 MODEL = "openmontage-gpt-oss:20b-32k"
 RESPONSE_INSTRUCTIONS = (
@@ -83,8 +86,40 @@ class DesktopApi:
         self.root = root.resolve()
         self.ollama_chat = ollama_chat or _ollama_chat
         self.file_picker = file_picker or (lambda: [])
+        self.store = ProjectStore(self.root)
+        from scripts.openmontage_chat.orchestrator import LocalOrchestrator
+        self.orchestrator = LocalOrchestrator(self.root, store=self.store, model_chat=self.ollama_chat)
+        self.active_project_id: str | None = None
 
-    def pick_materials(self) -> dict[str, Any]:
+    def _project_state(self, project_id: str) -> dict[str, Any]:
+        state = self.store.load(project_id)
+        manifest = Path(state["project_root"]) / "artifacts" / "input_manifest.json"
+        state["input_manifest"] = json.loads(manifest.read_text(encoding="utf-8"))
+        return state
+
+    def bootstrap(self) -> dict[str, Any]:
+        projects = self.store.list()
+        if not projects:
+            active = self.create_project("Новый монтаж")
+        else:
+            self.active_project_id = projects[0]["project_id"]
+            active = self._project_state(self.active_project_id)
+        return {"projects": self.store.list(), "active_project": active}
+
+    def create_project(self, title: str = "Новый монтаж") -> dict[str, Any]:
+        state = self.store.create(title)
+        self.active_project_id = state["project_id"]
+        return self._project_state(self.active_project_id)
+
+    def open_project(self, project_id: str) -> dict[str, Any]:
+        self.active_project_id = project_id
+        return self._project_state(project_id)
+
+    def rename_project(self, project_id: str, title: str) -> dict[str, Any]:
+        self.store.set_status(project_id, self.store.load(project_id)["status"], title=title.strip() or "Новый монтаж")
+        return self._project_state(project_id)
+
+    def pick_materials(self, project_id: str | None = None) -> dict[str, Any]:
         result = []
         for raw in self.file_picker():
             path = Path(raw).expanduser().resolve()
@@ -97,7 +132,42 @@ class DesktopApi:
                 "mime": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
                 "size": path.stat().st_size,
             })
-        return {"materials": result}
+        payload: dict[str, Any] = {"materials": result}
+        active = project_id or self.active_project_id
+        if active and result:
+            register_inputs(active, [item["path"] for item in result], priority=InputPriority.REQUIRED, pipeline_dir=self.store.projects_root)
+            payload["project"] = self._project_state(active)
+        return payload
+
+    def submit(self, project_id: str, message: str, mode: str = "confirm") -> dict[str, Any]:
+        return self._project_state(self.orchestrator.submit(project_id, message, mode)["project_id"])
+
+    def answer_questions(self, project_id: str, answers: dict[str, str], mode: str = "confirm") -> dict[str, Any]:
+        self.store.update_brief(project_id, answers, questions=[])
+        summary = "; ".join(f"{key}: {value}" for key, value in answers.items())
+        return self.submit(project_id, "Ответы на уточнения: " + summary, mode)
+
+    def set_enhancements(self, project_id: str, choices: dict[str, bool], mode: str = "confirm") -> dict[str, Any]:
+        self.store.update_brief(project_id, {"enhancements": choices}, enhancements=[])
+        selected = [key for key, enabled in choices.items() if enabled]
+        return self.submit(project_id, "Выбранные улучшения: " + (", ".join(selected) or "без дополнительных улучшений"), mode)
+
+    def approve_plan(self, project_id: str) -> dict[str, Any]:
+        return self._project_state(self.orchestrator.approve_plan(project_id)["project_id"])
+
+    def create_version(self, project_id: str) -> dict[str, Any]:
+        self.store.create_version(project_id)
+        return self._project_state(project_id)
+
+    def open_project_folder(self, project_id: str) -> dict[str, Any]:
+        path = Path(self.store.load(project_id)["project_root"])
+        subprocess.Popen(["explorer.exe", str(path)])
+        return {"ok": True, "path": str(path)}
+
+    def open_artifact(self, project_id: str, path: str) -> dict[str, Any]:
+        artifact = self.store.verify_artifact(project_id, path)
+        subprocess.Popen(["explorer.exe", artifact["path"]])
+        return {"ok": True, "artifact": artifact}
 
     def chat(self, body: dict[str, Any]) -> dict[str, Any]:
         paths = body.get("materials") or []

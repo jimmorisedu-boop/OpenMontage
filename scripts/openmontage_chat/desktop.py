@@ -9,7 +9,7 @@ from scripts.openmontage_chat.app import DesktopApi
 
 
 class NativeApi(DesktopApi):
-    def pick_materials(self):
+    def pick_materials(self, project_id=None):
         selection = webview.windows[0].create_file_dialog(
             webview.FileDialog.OPEN,
             allow_multiple=True,
@@ -21,7 +21,7 @@ class NativeApi(DesktopApi):
         original = self.file_picker
         try:
             self.file_picker = lambda: list(selection or [])
-            return super().pick_materials()
+            return super().pick_materials(project_id)
         finally:
             self.file_picker = original
 
