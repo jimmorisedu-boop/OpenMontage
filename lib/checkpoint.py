@@ -221,6 +221,8 @@ def init_project(
         "assets/video",
         "assets/audio",
         "assets/music",
+        "inputs/downloads",
+        "inputs/derivatives",
         "renders",
     ):
         (project_dir / sub).mkdir(parents=True, exist_ok=True)
@@ -244,6 +246,18 @@ def init_project(
 
     with open(marker_path, "w", encoding="utf-8") as f:
         json.dump(marker, f, indent=2)
+
+    input_manifest_path = project_dir / "artifacts" / "input_manifest.json"
+    if not input_manifest_path.exists():
+        from schemas.artifacts import validate_artifact
+
+        input_manifest = {"version": "1.0", "project_id": project_id, "inputs": []}
+        validate_artifact("input_manifest", input_manifest)
+        temporary = input_manifest_path.with_name(input_manifest_path.name + ".tmp")
+        temporary.write_text(
+            json.dumps(input_manifest, indent=2, ensure_ascii=False), encoding="utf-8"
+        )
+        temporary.replace(input_manifest_path)
 
     return project_dir
 

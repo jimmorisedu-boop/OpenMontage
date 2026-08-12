@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openmontage.local/schemas/artifacts/input_manifest.schema.json",
+  "title": "OpenMontage Input Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "project_id", "inputs"],
+  "properties": {
+    "version": {"const": "1.0"},
+    "project_id": {"type": "string", "minLength": 1},
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id", "path", "source_kind", "media_type", "role", "priority",
+          "interpretation_status", "relationships", "technical_metadata"
+        ],
+        "properties": {
+          "id": {"type": "string", "pattern": "^input-[0-9a-f]{16}$"},
+          "path": {"type": "string", "minLength": 1},
+          "source_kind": {"enum": ["local", "download"]},
+          "source_url": {"type": "string"},
+          "media_type": {"enum": ["video", "audio", "image", "document", "text", "subtitle", "edit-data", "unknown"]},
+          "role": {"type": "string", "minLength": 1},
+          "priority": {"enum": ["required", "reference", "optional"]},
+          "interpretation_status": {"enum": ["supported", "unsupported"]},
+          "relationships": {"type": "array", "items": {"type": "string"}},
+          "technical_metadata": {"type": "object"},
+          "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+          "provenance": {"type": "object"}
+        }
+      }
+    }
+  }
+}
