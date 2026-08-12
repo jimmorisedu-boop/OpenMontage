@@ -6,6 +6,8 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $runtime = Join-Path $repoRoot 'runtime'
 $python = Join-Path $runtime 'python\python.exe'
 if (-not (Test-Path -LiteralPath $python)) { throw 'Portable Python is missing. Run SETUP_PORTABLE_RUNTIME.bat.' }
+$pythonWindowed = Join-Path $runtime 'python\pythonw.exe'
+if (-not (Test-Path -LiteralPath $pythonWindowed)) { $pythonWindowed = $python }
 $layout = (& $python -m scripts.portable_runtime_layout --root $repoRoot) | ConvertFrom-Json
 if ($LASTEXITCODE -ne 0) { throw 'Could not resolve the portable runtime layout.' }
 if ($InspectRuntime) { $layout | ConvertTo-Json -Compress; exit 0 }
@@ -52,7 +54,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Portable preflight failed.' }
 
     # A native pywebview window owns its lifecycle and talks to Python directly.
-    $window = Start-Process -FilePath $python -ArgumentList @(
+    $window = Start-Process -FilePath $pythonWindowed -ArgumentList @(
         '-m', 'scripts.openmontage_chat.desktop', '--root', $repoRoot
     ) -WorkingDirectory $repoRoot -PassThru -Wait
     exit $window.ExitCode
