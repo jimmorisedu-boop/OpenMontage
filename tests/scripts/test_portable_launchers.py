@@ -21,6 +21,8 @@ def test_setup_installs_only_portable_chat_runtime():
         "ollama-windows-amd64.zip",
         "gpt-oss:20b",
         "qwen3.5:9b",
+        "setuptools>=75,<82",
+        "--no-build-isolation",
         "openmontage_preflight",
         "..\\..",
     ]

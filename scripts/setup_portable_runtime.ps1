@@ -56,7 +56,9 @@ if (-not (Test-Path -LiteralPath $paths.python)) {
     & $paths.python (Get-VerifiedArtifact $artifacts.get_pip) --disable-pip-version-check --no-warn-script-location
     if ($LASTEXITCODE -ne 0) { throw 'Failed to bootstrap pip in portable Python.' }
 }
-& $paths.python -m pip install --disable-pip-version-check --no-warn-script-location -r (Join-Path $repoRoot 'config\runtime\requirements-portable.txt')
+& $paths.python -m pip install --disable-pip-version-check --no-warn-script-location 'setuptools>=75,<82'
+if ($LASTEXITCODE -ne 0) { throw 'Failed to install the portable Python build runtime.' }
+& $paths.python -m pip install --disable-pip-version-check --no-warn-script-location --no-build-isolation -r (Join-Path $repoRoot 'config\runtime\requirements-portable.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Failed to install the portable local Python dependencies.' }
 
 if (-not (Test-Path -LiteralPath $paths.ollama)) {

@@ -33,7 +33,7 @@ def test_preflight_passes_a_complete_portable_runtime(tmp_path):
     _make_runtime(tmp_path)
     report = run_preflight(
         tmp_path,
-        module_probe=lambda python, module: module == "mcp",
+        module_probe=lambda python, module: module in {"mcp", "webview"},
         ollama_probe=lambda executable: _ready_ollama(),
         writable_probe=lambda path: True,
     )
@@ -50,7 +50,7 @@ def test_preflight_reports_every_missing_local_prerequisite(tmp_path):
     )
     failed = {check.id for check in report.checks if not check.ok}
     assert failed == {
-        "python", "mcp_sdk", "ollama_binary", "ollama_service",
+        "python", "mcp_sdk", "desktop_shell", "ollama_binary", "ollama_service",
         "ffmpeg", "ffprobe", "downloader", "models", "context", "runtime_writable",
     }
     assert all(check.remedy for check in report.checks if not check.ok)

@@ -108,6 +108,7 @@ def run_preflight(
     python = path(layout.python_exe)
     ollama = ollama_probe(path(layout.ollama_exe))
     mcp_ready = python.is_file() and module_probe(python, "mcp")
+    desktop_ready = python.is_file() and module_probe(python, "webview")
     checks = [
         _file_check("python", "Portable Python", python),
         PreflightCheck(
@@ -115,6 +116,12 @@ def run_preflight(
             mcp_ready,
             "Python MCP SDK is available." if mcp_ready else "Python MCP SDK is missing.",
             "Run SETUP_PORTABLE_RUNTIME.bat to restore the pinned Python environment.",
+        ),
+        PreflightCheck(
+            "desktop_shell",
+            desktop_ready,
+            "Native WebView2 shell is available." if desktop_ready else "Native WebView2 shell is missing.",
+            "Run SETUP_PORTABLE_RUNTIME.bat to restore the native desktop shell.",
         ),
         _file_check("ollama_binary", "Portable Ollama", path(layout.ollama_exe)),
         PreflightCheck(
