@@ -1,4 +1,4 @@
-"""Resolve the repository-local runtime layout used by Windows launchers."""
+"""Single source of truth for the movable OpenMontage Windows runtime."""
 
 from __future__ import annotations
 
@@ -10,32 +10,48 @@ from pathlib import Path
 
 ORCHESTRATOR_MODEL = "openmontage-gpt-oss:20b-32k"
 VISION_MODEL = "qwen3.5:9b"
-CODEX_INTEGRATION = "codex-app"
 
 
 @dataclass(frozen=True)
-class PortableRuntimeLayout:
+class PortableLayout:
+    root: str
     runtime_root: str
+    jan_exe: str
+    jan_data: str
+    python_exe: str
     ollama_exe: str
+    models_dir: str
     ffmpeg_exe: str
     ffprobe_exe: str
-    models_dir: str
+    ytdlp_exe: str
+    state_dir: str
+    temp_dir: str
     logs_dir: str
     orchestrator_model: str = ORCHESTRATOR_MODEL
     vision_model: str = VISION_MODEL
-    codex_integration: str = CODEX_INTEGRATION
 
 
-def resolve_layout(root: Path) -> PortableRuntimeLayout:
+# Compatibility for existing imports while launchers migrate to PortableLayout.
+PortableRuntimeLayout = PortableLayout
+
+
+def resolve_layout(root: Path) -> PortableLayout:
     root = root.resolve()
-    runtime_root = root / "runtime"
-    return PortableRuntimeLayout(
-        runtime_root=str(runtime_root),
-        ollama_exe=str(runtime_root / "ollama" / "ollama.exe"),
-        ffmpeg_exe=str(runtime_root / "ffmpeg" / "ffmpeg.exe"),
-        ffprobe_exe=str(runtime_root / "ffmpeg" / "ffprobe.exe"),
-        models_dir=str(runtime_root / "models"),
-        logs_dir=str(runtime_root / "logs"),
+    runtime = root / "runtime"
+    return PortableLayout(
+        root=str(root),
+        runtime_root=str(runtime),
+        jan_exe=str(runtime / "jan" / "Jan.exe"),
+        jan_data=str(runtime / "jan-data"),
+        python_exe=str(runtime / "python" / "python.exe"),
+        ollama_exe=str(runtime / "ollama" / "ollama.exe"),
+        models_dir=str(runtime / "models"),
+        ffmpeg_exe=str(runtime / "ffmpeg" / "ffmpeg.exe"),
+        ffprobe_exe=str(runtime / "ffmpeg" / "ffprobe.exe"),
+        ytdlp_exe=str(runtime / "downloader" / "yt-dlp.exe"),
+        state_dir=str(runtime / "state"),
+        temp_dir=str(runtime / "temp"),
+        logs_dir=str(runtime / "logs"),
     )
 
 
