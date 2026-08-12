@@ -76,6 +76,24 @@ stages:
 """, encoding="utf-8")
 
 
+def _ordered_pipeline(root: Path):
+    path = root / "pipeline_defs" / "ordered.yaml"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("""name: ordered
+stages:
+  - name: idea
+    skill: pipelines/fixture/idea-director
+    produces: [brief]
+    tools_available: []
+    human_approval_default: true
+  - name: compose
+    skill: pipelines/fixture/compose-director
+    produces: [render_report]
+    tools_available: [fixture_writer]
+    human_approval_default: false
+""", encoding="utf-8")
+
+
 def test_decision_parser_bounds_questions_and_improvements():
     value = _decision(
         questions=[{"question_id": str(i), "text": "Q", "choices": [{"value": "a", "label": "A"}, {"value": "b", "label": "B"}]} for i in range(5)],
@@ -294,3 +312,17 @@ def test_approval_requires_active_plan_id_and_every_expected_artifact(tmp_path: 
     result = orchestrator.approve_plan(state["project_id"], saved["plan_id"], "confirm")
     assert result["status"] == "needs_attention"
     assert result["artifacts_state"]["verified"][0]["path"] == output
+
+
+def test_plan_cannot_skip_incomplete_manifest_stages(tmp_path: Path):
+    _ordered_pipeline(tmp_path)
+    store = ProjectStore(tmp_path)
+    state = store.create("Order")
+    output = str(Path(state["project_root"]) / "renders" / "final.txt")
+    orchestrator = LocalOrchestrator(tmp_path, store=store, adapter=FakeAdapter())
+
+    with pytest.raises(ValueError, match="следующая стадия.*idea"):
+        orchestrator.validate_plan(state["project_id"], {
+            "pipeline": "ordered", "stage": "compose",
+            "steps": [{"tool": "fixture_writer", "params": {"output_path": output}}],
+        })

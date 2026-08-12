@@ -145,7 +145,8 @@ class DesktopApi:
     def submit(self, project_id: str, message: str, mode: str = "confirm") -> dict[str, Any]:
         result = self.orchestrator.submit(project_id, message, mode)
         plan = result.get("plan") or {}
-        if mode == "auto" and result.get("status") == "awaiting_approval" and plan.get("plan_id"):
+        human_gate = bool(plan.get("stage_contract", {}).get("human_approval_required"))
+        if mode == "auto" and not human_gate and result.get("status") == "awaiting_approval" and plan.get("plan_id"):
             return self.approve_plan(project_id, plan["plan_id"], mode)["project"]
         return self._project_state(result["project_id"])
 

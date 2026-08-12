@@ -156,6 +156,15 @@ class LocalOrchestrator:
         stage = next((item for item in stages if item.get("name") == stage_name), None)
         if stages and not stage:
             raise ValueError(f"Неизвестная стадия pipeline (нет такой стадии): {stage_name}")
+        if stages:
+            completed = {
+                item.name.removeprefix("checkpoint_").removesuffix(".json")
+                for item in project.glob("checkpoint_*.json")
+                if self._completed_checkpoint(item, pipeline)
+            }
+            next_stage = next((item.get("name") for item in stages if item.get("name") not in completed), None)
+            if stage_name != next_stage:
+                raise ValueError(f"Нельзя пропустить pipeline: следующая стадия — {next_stage}")
         allowed = {item["name"] for item in self.capability_envelope()}
         if stage is not None:
             allowed &= set(stage.get("tools_available", []))
@@ -201,6 +210,14 @@ class LocalOrchestrator:
                 "review_focus": list(stage.get("review_focus", [])),
             }
         return validated
+
+    @staticmethod
+    def _completed_checkpoint(path: Path, pipeline: str) -> bool:
+        try:
+            value = json.loads(path.read_text(encoding="utf-8"))
+            return value.get("pipeline_type") == pipeline and value.get("status") == "completed"
+        except (OSError, json.JSONDecodeError):
+            return False
 
     def submit(self, project_id: str, message: str, mode: str) -> dict[str, Any]:
         self.store.append_entry(project_id, {"role": "user", "type": "text", "text": message})

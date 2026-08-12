@@ -214,6 +214,24 @@ def test_auto_submit_starts_the_same_background_operation(tmp_path: Path):
     assert result["project_id"] == project["project_id"]
 
 
+def test_auto_submit_does_not_cross_manifest_human_gate(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Gate")
+    saved = api.store.save_plan(project["project_id"], {
+        "pipeline": "fixture", "steps": [],
+        "stage_contract": {"human_approval_required": True},
+    }, mode="auto")
+    api.orchestrator.submit = lambda project_id, message, mode: api.store.load(project_id)
+    calls = []
+    api.approve_plan = lambda *args: calls.append(args)
+
+    result = api.submit(project["project_id"], "Делай", "auto")
+
+    assert calls == []
+    assert result["status"] == "awaiting_approval"
+    assert result["plan"]["plan_id"] == saved["plan_id"]
+
+
 def test_chat_api_returns_structured_summary(tmp_path: Path):
     client = TestClient(create_app(
         root=tmp_path,
