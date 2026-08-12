@@ -5,14 +5,14 @@ ROOT = Path(__file__).resolve().parents[2]
 PIPELINES = ["talking-head", "clip-factory", "hybrid", "screen-demo", "podcast-repurpose", "cinematic", "localization-dub"]
 
 
-def test_handbook_covers_offline_workflow_and_examples():
+def test_handbook_covers_portable_local_workflow_and_examples():
     text = (ROOT / "docs" / "LOCAL_TEXT_EDITING_GUIDE.md").read_text(encoding="utf-8")
     for phrase in [
-        "Что работает локально", "Подготовка исходников", "Первый запуск",
-        "Как составить задачу", "Как принимаются монтажные решения",
-        "Чистка talking-head", "Хайлайты подкаста", "Screen demo",
-        "Локализация только субтитрами", "Что исключено",
-        "projects/<project-id>/renders/", "gpt-oss:20b", "qwen3.5:9b",
+        "Установка и запуск", "Что можно подавать на вход",
+        "Как поставить хорошую задачу", "Как OpenMontage принимает монтажные решения",
+        "Рекомендуемый порядок работы", "Устранение проблем",
+        "projects/<project-id>/renders/", "openmontage-gpt-oss:20b-32k", "qwen3.5:9b",
+        "раскадровку", "публичную ссылку", "Confirm", "Read-only",
     ]:
         assert phrase in text
     assert "только локальные инструменты" in text
