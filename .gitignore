@@ -12,6 +12,7 @@ build/
 
 # Test/IDE
 .pytest_cache/
+.superpowers/
 .mypy_cache/
 .ruff_cache/
 htmlcov/

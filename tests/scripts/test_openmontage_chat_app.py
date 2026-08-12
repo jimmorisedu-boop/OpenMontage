@@ -232,6 +232,82 @@ def test_auto_submit_does_not_cross_manifest_human_gate(tmp_path: Path):
     assert result["plan"]["plan_id"] == saved["plan_id"]
 
 
+def test_shell_is_an_adaptive_three_region_director_studio(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        'class="project-rail"', 'class="director-canvas"', 'class="context-rail"',
+        'id="preview-stage"', 'id="edit-overview"', 'id="context-tabs"',
+        'data-tab="assistant"', 'data-tab="files"', 'aria-label="Обзор монтажа"',
+        '@media(max-width:900px)', 'prefers-reduced-transparency', 'prefers-contrast:more',
+    ]:
+        assert marker in html
+    assert "model-selector" not in html
+    assert "agent-selector" not in html
+    assert "provider-selector" not in html
+
+
+def test_shell_derives_preview_and_read_only_timeline_from_project_state(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "selectPlayableArtifact", "renderPreview", "renderTimeline", "timelineSegments",
+        "artifacts_state", "verified_artifact", "plan.steps", "input_manifest",
+        "preview-video", "preview-empty", "timeline-playhead", "audio-lane",
+        "Обзор монтажа", "Управляйте монтажом через помощника",
+    ]:
+        assert marker in html
+
+
+def test_shell_context_rail_groups_assistant_files_results_and_versions(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "activateContextTab", "assistant-panel", "files-panel", "renderFileLibrary",
+        "groupMaterials", "renderVersions", "renderVerifiedOutputs", "input-composer",
+        "Помощник", "Файлы", "Исходники", "Результаты", "Версии",
+        "open_artifact(active.project_id,a.artifact_id)", "open_project_folder",
+    ]:
+        assert marker in html
+
+
+def test_shell_keeps_questions_operations_and_errors_compact_in_assistant(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "renderCurrentOperation", "questionCard", "planCard", "resultCard",
+        "aria-live=\"polite\"", "role=\"alert\"", "entry.active===false",
+        "operation_status", "cancel_operation", "resume_operation",
+    ]:
+        assert marker in html
+    assert "alert(" not in html
+
+
+def test_shell_explains_project_progress_and_recovers_preview_failures(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        'id="stage-meter"', "renderStageMeter", "stageNames", "stageIndex",
+        'id="preview-recovery"', "previewVideo.onerror", "showPreviewRecovery",
+        'name="project-title"', 'name="work-mode"', 'name="edit-request"',
+        'autocomplete="off"', 'meta name="theme-color"', "color-scheme:light",
+    ]:
+        assert marker in html
+
+
+def test_shell_keeps_compact_questions_submittable_and_files_actionable(tmp_path: Path):
+    html = TestClient(create_app(root=tmp_path)).get("/").text
+
+    for marker in [
+        "visibleQuestions", "visibleQuestions.every", "renderMaterialGroup",
+        "parent_version_id", "previewArtifact", "Смотреть", "group-count",
+        'aria-controls="assistant-panel"', 'aria-labelledby="assistant-tab"',
+        "tab.tabIndex", "timeline-segment", "role','img'",
+    ]:
+        assert marker in html
+    assert 'class="assistant-stream" id="assistant-stream" aria-live=' not in html
+
+
 def test_chat_api_returns_structured_summary(tmp_path: Path):
     client = TestClient(create_app(
         root=tmp_path,
