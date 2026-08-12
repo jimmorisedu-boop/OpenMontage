@@ -26,7 +26,7 @@ def test_jan_artifact_manifest_is_immutable_and_complete():
         "source_url": "https://github.com/janhq/jan/archive/refs/tags/v0.8.0.zip",
         "source_sha256": "d74fff3a692dc1f7cd38b03f9ecd277ac1119b37d02539e317df3d8cb626fd57",
         "portable_url": "https://github.com/jimmorisedu-boop/OpenMontage/releases/download/openmontage-jan-v0.8.0/OpenMontage-Jan-v0.8.0.exe",
-        "portable_sha256": "cca5ce9c2043cbd7076e724e7ffa19086a4912f5e4343ea0a8623f06a5873276",
+        "portable_sha256": "ee36eef45ea5adeaac3c0a3a1421bcce3a46fcf6d38b6ced430b9a348e8ba54f",
         "output": "runtime/jan/Jan.exe",
     }
     assert GIT_SHA.fullmatch(jan["commit"])
