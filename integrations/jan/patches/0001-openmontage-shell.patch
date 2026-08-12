@@ -280,10 +280,28 @@ index 0000000000000000000000000000000000000000..b540a9a3ba3b0c77872830bfd62e9d3a
 +}
 
 diff --git a/web-app/src/components/left-sidebar/NavMain.tsx b/web-app/src/components/left-sidebar/NavMain.tsx
-index 6ad7b0822899aada8895d7256d6c7be00c45ba9b..1cddd8f46b7743fcb865091e7aaac65a3262a748 100644
+index 6ad7b0822899aada8895d7256d6c7be00c45ba9b..57ea593656e13d8102210306e11733e74965e2d5 100644
 --- a/web-app/src/components/left-sidebar/NavMain.tsx
 +++ b/web-app/src/components/left-sidebar/NavMain.tsx
-@@ -87,13 +86,0 @@ const getNavMainItems = (
+@@ -27,9 +26,0 @@ import {
+-import {
+-  SettingsIcon,
+-  type SettingsIconHandle,
+-} from '@/components/animated-icon/settings'
+-import { BlocksIcon, type BlocksIconHandle } from '../animated-icon/blocks'
+-import {
+-  BotIcon,
+-  type BotIconHandle,
+-} from '@/components/animated-icon/bot'
+@@ -49,3 +39,0 @@ type AnimatedIconHandle =
+-  | SettingsIconHandle
+-  | BlocksIconHandle
+-  | BotIconHandle
+@@ -71,2 +59 @@ const getNavMainItems = (
+-  onNewChat: () => void,
+-  onJanClaw: () => void
++  onNewChat: () => void
+@@ -87,13 +73,0 @@ const getNavMainItems = (
 -  {
 -    title: 'common:newAgentChat',
 -    animatedIcon: BotIcon,
@@ -297,7 +315,7 @@ index 6ad7b0822899aada8895d7256d6c7be00c45ba9b..1cddd8f46b7743fcb865091e7aaac65a
 -      </KbdGroup>
 -    ),
 -  },
-@@ -126,10 +112,0 @@ const getNavMainItems = (
+@@ -126,10 +99,0 @@ const getNavMainItems = (
 -  {
 -    title: 'common:hub',
 -    url: route.hub.index,
@@ -308,6 +326,14 @@ index 6ad7b0822899aada8895d7256d6c7be00c45ba9b..1cddd8f46b7743fcb865091e7aaac65a
 -    url: route.settings.general,
 -    animatedIcon: SettingsIcon,
 -  },
+@@ -184,4 +147,0 @@ export function NavMain() {
+-    },
+-    () => {
+-      useAgentMode.getState().setAgentMode(TEMPORARY_CHAT_ID, true)
+-      navigate({ to: route.home })
+@@ -189 +149 @@ export function NavMain() {
+-  ).filter((item) => item.title !== 'common:newAgentChat')
++  )
 
 diff --git a/web-app/src/containers/ChatInput.tsx b/web-app/src/containers/ChatInput.tsx
 index 5d047bae598a7963c49214217bbc463362402514..6b48e91a2bac576418940366e768368d4de5fa48 100644
@@ -362,26 +388,32 @@ index 32ac9941d88b04c38f6170facb9960e6d775bc0e..425042b8dc504d8aa4d3a88373fd149e
 +      selectedModel: { id: 'openmontage-gpt-oss:20b-32k', name: 'OpenMontage Local', displayName: 'OpenMontage Local', capabilities: ['tools'] },
 
 diff --git a/web-app/src/routes/index.tsx b/web-app/src/routes/index.tsx
-index 6f6026d704a78b38a4898b9103b20b779e4ad6e2..4d4ce86474982fbcd89063c45a2ac56106e44a89 100644
+index 6f6026d704a78b38a4898b9103b20b779e4ad6e2..e1914247e1c1b769e235165f702d7701be253980 100644
 --- a/web-app/src/routes/index.tsx
 +++ b/web-app/src/routes/index.tsx
-@@ -79 +79 @@ function Index() {
+@@ -25 +24,0 @@ import { useThreads } from '@/hooks/useThreads'
+-import DropdownModelProvider from '@/containers/DropdownModelProvider'
+@@ -79 +78 @@ function Index() {
 -          <DropdownModelProvider model={threadModel} />
 +          <span className="text-sm font-medium">OpenMontage Local</span>
 
 diff --git a/web-app/src/routes/project/$projectId.tsx b/web-app/src/routes/project/$projectId.tsx
-index a7a840b22e30e1d2b9cf88edbc32dbd97be952bb..0c002e78ae9c543030f78e38a8a7a5a0208563da 100644
+index a7a840b22e30e1d2b9cf88edbc32dbd97be952bb..ab873dac50bccb5215ae3adb04f03f7321c70ebb 100644
 --- a/web-app/src/routes/project/$projectId.tsx
 +++ b/web-app/src/routes/project/$projectId.tsx
-@@ -92 +92 @@ function ProjectPageContent() {
+@@ -16 +15,0 @@ import ProjectFiles from '@/containers/ProjectFiles'
+-import DropdownModelProvider from '@/containers/DropdownModelProvider'
+@@ -92 +91 @@ function ProjectPageContent() {
 -          <DropdownModelProvider />
 +          <span className="text-sm font-medium">OpenMontage Local</span>
 
 diff --git a/web-app/src/routes/threads/$threadId.tsx b/web-app/src/routes/threads/$threadId.tsx
-index 5836f1f1b3d8fb6237a2bf991d38cb8914ca3b24..5adbd4e4125e7c16861a93d7b6ebeba39a1f0c54 100644
+index 5836f1f1b3d8fb6237a2bf991d38cb8914ca3b24..afe0c01a69c246cb8063245d138414e52a503ecc 100644
 --- a/web-app/src/routes/threads/$threadId.tsx
 +++ b/web-app/src/routes/threads/$threadId.tsx
-@@ -1101 +1101 @@ function ThreadDetail() {
+@@ -52 +51,0 @@ import { useToolApproval } from '@/hooks/useToolApproval'
+-import DropdownModelProvider from '@/containers/DropdownModelProvider'
+@@ -1101 +1100 @@ function ThreadDetail() {
 -          <DropdownModelProvider model={threadModel} />
 +          <span className="text-sm font-medium">OpenMontage Local</span>
 
@@ -422,7 +454,7 @@ index b4d894334949512240560b2874eb2f52a67aa789..92ac12ed93a795282ae475168d6c7269
 
 diff --git a/web-app/src/stores/openmontage-permission-store.ts b/web-app/src/stores/openmontage-permission-store.ts
 new file mode 100644
-index 0000000000000000000000000000000000000000..57ab9d6fc208421e5f212b890fd5c9a7a2e3a30b
+index 0000000000000000000000000000000000000000..3bc63ebeaa678ba6b08571b6cd364b284009aac6
 --- /dev/null
 +++ b/web-app/src/stores/openmontage-permission-store.ts
 @@ -0,0 +1,35 @@
