@@ -47,6 +47,14 @@ def test_launcher_opens_the_owned_openmontage_chat_window():
     assert "codex" not in launcher.lower()
 
 
+def test_launcher_serializes_restart_before_reusing_ollama():
+    launcher = _read("scripts/start_openmontage.ps1")
+
+    assert "Local\\OpenMontagePortableLauncher" in launcher
+    assert ".WaitOne(" in launcher
+    assert ".ReleaseMutex()" in launcher
+
+
 def test_user_facing_bat_names_match_the_new_windowed_shell():
     start = _read("START_OPENMONTAGE.bat")
     setup = _read("SETUP_PORTABLE_RUNTIME.bat")

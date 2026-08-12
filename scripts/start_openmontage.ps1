@@ -32,8 +32,13 @@ $env:TMP = [string]$layout.temp_dir
 function Test-LocalOllama {
     try { Invoke-WebRequest -UseBasicParsing -Uri 'http://127.0.0.1:11434/api/version' -TimeoutSec 2 | Out-Null; return $true } catch { return $false }
 }
+$launcherMutex = [System.Threading.Mutex]::new($false, 'Local\OpenMontagePortableLauncher')
+$mutexAcquired = $false
 $owned = @()
 try {
+    $mutexAcquired = $launcherMutex.WaitOne([TimeSpan]::FromSeconds(20))
+    if (-not $mutexAcquired) { throw 'OpenMontage is already running.' }
+
     if (-not (Test-LocalOllama)) {
         $ollama = Start-Process -FilePath $layout.ollama_exe -ArgumentList 'serve' -WorkingDirectory $runtime -WindowStyle Hidden `
             -RedirectStandardOutput (Join-Path $layout.logs_dir 'ollama-server.stdout.log') `
@@ -56,4 +61,6 @@ try {
     foreach ($process in $owned) {
         if (-not $process.HasExited) { Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue }
     }
+    if ($mutexAcquired) { $launcherMutex.ReleaseMutex() }
+    $launcherMutex.Dispose()
 }
