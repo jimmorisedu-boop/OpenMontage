@@ -122,6 +122,45 @@ def test_native_bridge_picks_materials_without_http(tmp_path: Path):
     assert result["materials"][0]["kind"] == "video"
 
 
+def test_native_bridge_registers_explicit_dropped_paths(tmp_path: Path):
+    clip = tmp_path / "dropped.mov"
+    notes = tmp_path / "notes.md"
+    clip.write_bytes(b"video")
+    notes.write_text("brief", encoding="utf-8")
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Drop")
+
+    result = api.add_material_paths(project["project_id"], [str(clip), str(notes), str(clip)])
+
+    assert [item["path"] for item in result["materials"]] == [str(clip.resolve()), str(notes.resolve())]
+    assert [item["kind"] for item in result["materials"]] == ["video", "document"]
+    assert [item["path"] for item in result["project"]["input_manifest"]["inputs"]] == [str(clip.resolve()), str(notes.resolve())]
+
+
+def test_native_bridge_rejects_non_files_in_dropped_paths(tmp_path: Path):
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Drop")
+
+    with pytest.raises(FileNotFoundError, match="Файл не найден"):
+        api.add_material_paths(project["project_id"], [str(tmp_path / "missing.mp4")])
+
+
+def test_native_bridge_expands_dropped_directories(tmp_path: Path):
+    folder = tmp_path / "shoot"
+    nested = folder / "camera-a"
+    nested.mkdir(parents=True)
+    clip = nested / "take-01.mp4"
+    notes = folder / "notes.txt"
+    clip.write_bytes(b"video")
+    notes.write_text("selects", encoding="utf-8")
+    api = DesktopApi(root=tmp_path, ollama_chat=lambda payload: {})
+    project = api.create_project("Folder drop")
+
+    result = api.add_material_paths(project["project_id"], [str(folder)])
+
+    assert {item["path"] for item in result["materials"]} == {str(clip.resolve()), str(notes.resolve())}
+
+
 def test_native_bridge_chats_without_fetch(tmp_path: Path):
     calls = []
     api = DesktopApi(
@@ -295,6 +334,18 @@ def test_shell_derives_preview_and_read_only_timeline_from_project_state(tmp_pat
         "Обзор монтажа", "формируется из плана",
     ]:
         assert marker in source
+
+
+def test_shell_exposes_a_native_drop_zone_without_browser_fake_paths(tmp_path: Path):
+    source = ui_source()
+
+    for marker in [
+        "DropZone", "onDragEnter", "onDragOver", "onDragLeave", "onDrop",
+        "pywebviewFullPath", "add_material_paths", "Перетащите материалы сюда",
+        'role="region"', 'aria-label="Зона добавления материалов"', "drop-overlay",
+    ]:
+        assert marker in source
+    assert "webkitRelativePath" not in source
 
 
 def test_shell_context_rail_groups_assistant_files_results_and_versions(tmp_path: Path):

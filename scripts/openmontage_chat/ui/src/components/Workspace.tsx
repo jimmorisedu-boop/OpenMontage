@@ -13,6 +13,7 @@ type Props = {
   project: ProjectState; projects: ProjectSummary[]; mode: string; disabled?: boolean; error?: string;
   onMode: (mode: string) => void; onClearError: () => void; onCreate: () => void; onOpen: (id: string) => void;
   onRename: (title: string) => void; onDelete: () => void; onAdd: () => void; onSubmit: (message: string) => void;
+  onDropPaths: (paths: string[]) => void;
   onQuestions: (id: string, answers: Record<string, string>) => void; onEnhancements: (choices: Record<string, boolean>) => void;
   onApprove: (plan: Plan) => void; onCancel: (operation: Operation) => void; onResume: (operation: Operation) => void;
   onOpenFolder: () => void; onOpenArtifact: (artifact: Artifact) => void; onVersion: () => void;
@@ -61,11 +62,11 @@ export function Workspace(props: Props) {
     {props.error && <div className="inline-error" role="alert"><span>{props.error}</span><button onClick={props.onClearError}>Закрыть</button></div>}
 
     <div className="work-area">
-      {compact ? <Center project={props.project} timelineRef={timelineRef} timelineOpen={timelineOpen} setTimelineOpen={setTimelineOpen} onAdd={props.onAdd} onOpenArtifact={props.onOpenArtifact}/>
+      {compact ? <Center project={props.project} timelineRef={timelineRef} timelineOpen={timelineOpen} setTimelineOpen={setTimelineOpen} onAdd={props.onAdd} onDropPaths={props.onDropPaths} onOpenArtifact={props.onOpenArtifact}/>
         : <Group orientation="horizontal" id="openmontage-workspace" className="desktop-layout">
           <Panel id="projects" panelRef={leftRef} defaultSize="18%" minSize="220px" maxSize="360px" collapsible collapsedSize={0} onResize={(size) => setLeftOpen(size.inPixels > 0)}>{rail(!leftOpen)}</Panel>
           <Separator className="resize-handle vertical"><span/></Separator>
-          <Panel id="stage" minSize="420px"><Center project={props.project} timelineRef={timelineRef} timelineOpen={timelineOpen} setTimelineOpen={setTimelineOpen} onAdd={props.onAdd} onOpenArtifact={props.onOpenArtifact}/></Panel>
+          <Panel id="stage" minSize="420px"><Center project={props.project} timelineRef={timelineRef} timelineOpen={timelineOpen} setTimelineOpen={setTimelineOpen} onAdd={props.onAdd} onDropPaths={props.onDropPaths} onOpenArtifact={props.onOpenArtifact}/></Panel>
           <Separator className="resize-handle vertical"><span/></Separator>
           <Panel id="inspector" panelRef={rightRef} defaultSize="28%" minSize="340px" maxSize="520px" collapsible collapsedSize={0} onResize={(size) => setRightOpen(size.inPixels > 0)}>{inspector(!rightOpen)}</Panel>
         </Group>}
@@ -74,9 +75,9 @@ export function Workspace(props: Props) {
   </main>;
 }
 
-function Center({ project, timelineRef, timelineOpen, setTimelineOpen, onAdd, onOpenArtifact }: { project: ProjectState; timelineRef: ReturnType<typeof usePanelRef>; timelineOpen: boolean; setTimelineOpen: (open: boolean) => void; onAdd: () => void; onOpenArtifact: (artifact: Artifact) => void }) {
+function Center({ project, timelineRef, timelineOpen, setTimelineOpen, onAdd, onDropPaths, onOpenArtifact }: { project: ProjectState; timelineRef: ReturnType<typeof usePanelRef>; timelineOpen: boolean; setTimelineOpen: (open: boolean) => void; onAdd: () => void; onDropPaths: (paths: string[]) => void; onOpenArtifact: (artifact: Artifact) => void }) {
   return <div className="center-workspace"><Group orientation="vertical" id="stage-timeline" className="center-panels">
-    <Panel id="preview" minSize="260px"><StudioStage project={project} onAdd={onAdd} onOpenArtifact={onOpenArtifact}/></Panel>
+    <Panel id="preview" minSize="260px"><StudioStage project={project} onAdd={onAdd} onDropPaths={onDropPaths} onOpenArtifact={onOpenArtifact}/></Panel>
     <Separator className="resize-handle horizontal"><span/><button onClick={() => timelineOpen ? timelineRef.current?.collapse() : timelineRef.current?.expand()} aria-label={timelineOpen ? "Скрыть обзор монтажа" : "Показать обзор монтажа"}><Rows3/></button></Separator>
     <Panel id="timeline" panelRef={timelineRef} defaultSize="25%" minSize="150px" maxSize="44%" collapsible collapsedSize={0} onResize={(size) => setTimelineOpen(size.inPixels > 0)}><Timeline project={project}/></Panel>
   </Group></div>;

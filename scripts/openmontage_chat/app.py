@@ -140,18 +140,30 @@ class DesktopApi:
         return {"deleted": deleted, "projects": projects, "active_project": active}
 
     def pick_materials(self, project_id: str | None = None) -> dict[str, Any]:
+        return self.add_material_paths(project_id, list(self.file_picker()))
+
+    def add_material_paths(self, project_id: str | None, paths: list[str]) -> dict[str, Any]:
         result = []
-        for raw in self.file_picker():
+        seen: set[Path] = set()
+        for raw in paths:
             path = Path(raw).expanduser().resolve()
-            if not path.is_file():
+            if path.is_dir():
+                candidates = sorted((item.resolve() for item in path.rglob("*") if item.is_file()), key=str)
+            elif path.is_file():
+                candidates = [path]
+            else:
                 raise FileNotFoundError(f"Файл не найден: {path}")
-            result.append({
-                "name": path.name,
-                "path": str(path),
-                "kind": _kind(path),
-                "mime": mimetypes.guess_type(path.name)[0] or "application/octet-stream",
-                "size": path.stat().st_size,
-            })
+            for candidate in candidates:
+                if candidate in seen:
+                    continue
+                seen.add(candidate)
+                result.append({
+                    "name": candidate.name,
+                    "path": str(candidate),
+                    "kind": _kind(candidate),
+                    "mime": mimetypes.guess_type(candidate.name)[0] or "application/octet-stream",
+                    "size": candidate.stat().st_size,
+                })
         payload: dict[str, Any] = {"materials": result}
         active = project_id or self.active_project_id
         if active and result:

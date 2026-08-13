@@ -57,6 +57,7 @@ export function App() {
     onRename={(title) => run(() => api.rename_project(activeId, title), applyProject)}
     onDelete={() => run(() => api.delete_project(activeId), (response) => { setProjects(response.projects); applyProject(response.active_project); })}
     onAdd={() => run(() => api.pick_materials(activeId), (response) => { if (response.project) applyProject(response.project); })}
+    onDropPaths={(paths) => run(() => api.add_material_paths(activeId, paths), (response) => { if (response.project) applyProject(response.project); })}
     onSubmit={(message) => run(() => api.submit(activeId, message, mode), applyProject)}
     onQuestions={(id, answers) => run(() => api.answer_questions(activeId, id, answers, mode), applyProject)}
     onEnhancements={(choices) => run(() => api.set_enhancements(activeId, choices, mode), applyProject)}

@@ -30,6 +30,7 @@ export interface PyWebViewApi {
   rename_project(projectId: string, title: string): Promise<ProjectState>;
   delete_project(projectId: string): Promise<{ deleted: { recoverable: boolean }; projects: ProjectSummary[]; active_project: ProjectState }>;
   pick_materials(projectId: string): Promise<{ materials: Material[]; project?: ProjectState }>;
+  add_material_paths(projectId: string, paths: string[]): Promise<{ materials: Material[]; project?: ProjectState }>;
   submit(projectId: string, message: string, mode: string): Promise<ProjectState>;
   answer_questions(projectId: string, questionSetId: string, answers: Record<string, string>, mode: string): Promise<ProjectState>;
   set_enhancements(projectId: string, choices: Record<string, boolean>, mode: string): Promise<ProjectState>;
@@ -43,5 +44,9 @@ export interface PyWebViewApi {
 }
 
 declare global {
-  interface Window { pywebview?: { api: PyWebViewApi } }
+  interface Window {
+    pywebview?: { api: PyWebViewApi };
+    addEventListener(type: "openmontage:native-drop", listener: (event: CustomEvent<string[]>) => void): void;
+    removeEventListener(type: "openmontage:native-drop", listener: (event: CustomEvent<string[]>) => void): void;
+  }
 }
