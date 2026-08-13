@@ -10,7 +10,7 @@ export interface PlanStep { label?: string; tool?: string; description?: string 
 export interface Plan { plan_id: string; summary?: string; status?: string; read_only?: boolean; steps?: PlanStep[]; stage_contract?: { human_approval_required?: boolean } }
 export interface Operation { operation_id: string; project_id: string; plan_id?: string; status: string; progress_label?: string; current?: number; total?: number; can_resume?: boolean }
 export interface ConversationEntry {
-  entry_id?: string; role?: "user" | "assistant"; type: string; text?: string; summary?: string[]; active?: boolean;
+  entry_id?: string; role?: "user" | "assistant"; type: string; text?: string; summary?: string[]; active?: boolean; pending?: boolean;
   questions?: Question[]; question_set_id?: string; enhancements?: Array<{ enhancement_id: string; label: string; benefit?: string; cost?: string }>;
   plan?: Plan; artifact?: Artifact; artifact_bundle?: { artifact_id?: string; artifacts?: Artifact[] };
   label?: string; status?: string; step?: number; retained_work?: Artifact[];

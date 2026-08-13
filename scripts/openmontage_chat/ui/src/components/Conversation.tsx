@@ -14,19 +14,24 @@ type Actions = {
   createVersion: () => void;
 };
 
-export function Conversation({ project, actions, disabled }: { project: ProjectState; actions: Actions; disabled?: boolean }) {
+export function Conversation({ project, actions, disabled, thinking }: { project: ProjectState; actions: Actions; disabled?: boolean; thinking?: boolean }) {
   const endRef = useRef<HTMLDivElement>(null);
   const entries = project.conversation || [];
   const currentOperation = useMemo(() => (project.operations || []).slice().reverse().find((item) => ["queued", "running", "cancelling", "cancelled", "failed"].includes(item.status)), [project.operations]);
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" });
-  }, [entries.length, currentOperation?.status]);
+  }, [entries.length, currentOperation?.status, thinking]);
   return <div className="conversation" aria-live="polite" aria-busy={disabled}>
     {currentOperation && <OperationCard operation={currentOperation} onCancel={actions.cancelOperation} onResume={actions.resumeOperation}/>}
     {!entries.length && <WelcomeCard/>}
     {entries.map((entry, index) => <ConversationEntryView key={entry.entry_id || index} entry={entry} actions={actions}/>) }
+    {thinking && <ThinkingCard/>}
     <div ref={endRef}/>
   </div>;
+}
+
+function ThinkingCard() {
+  return <motion.div className="thinking-card" role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}><LoaderCircle className="spin"/><div><strong>Анализирую задачу</strong><span>Сопоставляю запрос, материалы и локальные инструменты</span></div></motion.div>;
 }
 
 function WelcomeCard() {
@@ -42,7 +47,7 @@ function ConversationEntryView({ entry, actions }: { entry: ConversationEntry; a
   if (entry.type === "operation") return null;
   return <motion.article className={`message ${entry.role === "user" ? "user" : "assistant"}`} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}>
     {entry.role !== "user" && <div className="assistant-avatar small"><WandSparkles/></div>}
-    <div className="message-body"><p>{entry.text}</p>{entry.summary?.length ? <details className="approach"><summary><Sparkles/>Как я подошёл к задаче<ChevronDown/></summary><ul>{entry.summary.map((item, index) => <li key={index}>{item}</li>)}</ul></details> : null}</div>
+    <div className="message-body"><p>{entry.text}</p>{entry.pending && <small className="message-state">Отправлено</small>}{entry.summary?.length ? <details className="approach"><summary><Sparkles/>Как я подошёл к задаче<ChevronDown/></summary><ul>{entry.summary.map((item, index) => <li key={index}>{item}</li>)}</ul></details> : null}</div>
   </motion.article>;
 }
 

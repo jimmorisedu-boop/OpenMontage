@@ -247,6 +247,17 @@ def test_shell_uses_active_ids_custom_answers_and_truthful_operations(tmp_path: 
     assert "plan_id" in source
     assert "operation_id" in source
     assert "operation_status" in source
+
+
+def test_shell_shows_submitted_command_and_compact_model_activity_immediately(tmp_path: Path):
+    source = ui_source()
+
+    for marker in [
+        "withOptimisticCommand", "pendingCommand", "Анализирую задачу",
+        "Сопоставляю запрос, материалы и локальные инструменты", "thinking-card",
+        "Отправлено", "api.open_project(activeId)",
+    ]:
+        assert marker in source
     assert "cancel_operation" in source
     assert "Другой ответ" in source
     assert "operation.progress_label" in source
