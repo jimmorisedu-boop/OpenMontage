@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ProjectState } from "./types";
-import { withOptimisticCommand } from "./optimistic";
+import { withOptimisticAnswers, withOptimisticCommand } from "./optimistic";
 
 const project: ProjectState = {
   project_id: "p1", title: "Test", status: "needs_brief", project_root: "C:\\project",
@@ -20,5 +20,18 @@ describe("optimistic command history", () => {
     const saved = { ...project, conversation: [{ role: "user" as const, type: "text", text: "Сделай тизер" }] };
 
     expect(withOptimisticCommand(saved, "Сделай тизер").conversation).toHaveLength(1);
+  });
+
+  it("immediately resolves the submitted question card without mutating server state", () => {
+    const asked = {
+      ...project,
+      conversation: [{ role: "assistant" as const, type: "questions", question_set_id: "set-1", active: true }],
+    };
+
+    const visible = withOptimisticAnswers(asked, "set-1");
+
+    expect(visible.conversation[0].active).toBe(false);
+    expect(visible.conversation[0].pending).toBe(true);
+    expect(asked.conversation[0].active).toBe(true);
   });
 });

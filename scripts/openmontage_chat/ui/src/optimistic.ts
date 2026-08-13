@@ -12,3 +12,14 @@ export function withOptimisticCommand(project: ProjectState, message: string): P
     ],
   };
 }
+
+export function withOptimisticAnswers(project: ProjectState, questionSetId: string): ProjectState {
+  return {
+    ...project,
+    conversation: project.conversation.map((entry) =>
+      entry.type === "questions" && entry.question_set_id === questionSetId
+        ? { ...entry, active: false, pending: true }
+        : entry,
+    ),
+  };
+}

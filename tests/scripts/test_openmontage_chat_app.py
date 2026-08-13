@@ -258,6 +258,16 @@ def test_shell_shows_submitted_command_and_compact_model_activity_immediately(tm
         "Отправлено", "api.open_project(activeId)",
     ]:
         assert marker in source
+
+
+def test_question_continue_button_shows_immediate_feedback_and_recovers_saved_state(tmp_path: Path):
+    source = ui_source()
+
+    for marker in [
+        "withOptimisticAnswers", "pendingQuestionSet", "Учитываю ответы",
+        "Ответы приняты", "disabled={disabled || !ready}", "api.open_project(activeId)",
+    ]:
+        assert marker in source
     assert "cancel_operation" in source
     assert "Другой ответ" in source
     assert "operation.progress_label" in source
@@ -269,7 +279,7 @@ def test_shell_scopes_answers_to_project_and_disables_stale_cards(tmp_path: Path
 
     assert "setAnswers" in source
     assert 'entry.active === false' in source
-    assert 'disabled={!ready}' in source
+    assert 'disabled={disabled || !ready}' in source
     assert 'disabled={entry.active === false}' in source
 
 

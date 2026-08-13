@@ -3,7 +3,7 @@ import { MotionConfig } from "motion/react";
 import { Tooltip } from "radix-ui";
 import type { Artifact, Operation, Plan, ProjectState, ProjectSummary, PyWebViewApi } from "./types";
 import { waitForBridge } from "./bridge";
-import { withOptimisticCommand } from "./optimistic";
+import { withOptimisticAnswers, withOptimisticCommand } from "./optimistic";
 import { Workspace } from "./components/Workspace";
 
 export function App() {
@@ -13,6 +13,7 @@ export function App() {
   const [mode, setMode] = useState(readSavedMode);
   const [pending, setPending] = useState(0);
   const [pendingCommand, setPendingCommand] = useState("");
+  const [pendingQuestionSet, setPendingQuestionSet] = useState("");
   const [error, setError] = useState("");
   const mounted = useRef(true);
 
@@ -53,8 +54,11 @@ export function App() {
   if (!project || !api) return <div className="launch-screen"><div className="launch-mark">OM</div><strong>OpenMontage</strong><span>Открываю локальную монтажную…</span></div>;
 
   const activeId = project.project_id;
-  const visibleProject = pendingCommand ? withOptimisticCommand(project, pendingCommand) : project;
-  return <Tooltip.Provider delayDuration={450}><MotionConfig reducedMotion="user"><Workspace project={visibleProject} projects={projects} mode={mode} disabled={pending > 0} thinking={Boolean(pendingCommand)} error={error} onClearError={() => setError("")} onMode={setMode}
+  const visibleProject = pendingQuestionSet
+    ? withOptimisticAnswers(project, pendingQuestionSet)
+    : pendingCommand ? withOptimisticCommand(project, pendingCommand) : project;
+  const activity = pendingQuestionSet ? "answers" : pendingCommand ? "command" : undefined;
+  return <Tooltip.Provider delayDuration={450}><MotionConfig reducedMotion="user"><Workspace project={visibleProject} projects={projects} mode={mode} disabled={pending > 0} activity={activity} error={error} onClearError={() => setError("")} onMode={setMode}
     onCreate={() => run(() => api.create_project("Новый монтаж"), applyProject)}
     onOpen={(id) => run(() => api.open_project(id), applyProject)}
     onRename={(title) => run(() => api.rename_project(activeId, title), applyProject)}
@@ -67,7 +71,12 @@ export function App() {
         if (!result) { const saved = await api.open_project(activeId); applyProject(saved); }
       }).finally(() => { if (mounted.current) setPendingCommand(""); });
     }}
-    onQuestions={(id, answers) => run(() => api.answer_questions(activeId, id, answers, mode), applyProject)}
+    onQuestions={(id, answers) => {
+      setPendingQuestionSet(id);
+      void run(() => api.answer_questions(activeId, id, answers, mode), applyProject).then(async (result) => {
+        if (!result) { const saved = await api.open_project(activeId); applyProject(saved); }
+      }).finally(() => { if (mounted.current) setPendingQuestionSet(""); });
+    }}
     onEnhancements={(choices) => run(() => api.set_enhancements(activeId, choices, mode), applyProject)}
     onApprove={(plan: Plan) => run(() => api.approve_plan(activeId, plan.plan_id, mode), (response) => applyProject(response.project))}
     onCancel={(operation: Operation) => run(() => api.cancel_operation(operation.operation_id), () => api.operation_status(operation.operation_id).then((response) => applyProject(response.project)))}

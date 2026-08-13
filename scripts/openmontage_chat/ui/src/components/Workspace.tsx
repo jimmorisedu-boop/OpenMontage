@@ -10,7 +10,7 @@ import { StudioStage } from "./StudioStage";
 import { Timeline } from "./Timeline";
 
 type Props = {
-  project: ProjectState; projects: ProjectSummary[]; mode: string; disabled?: boolean; thinking?: boolean; error?: string;
+  project: ProjectState; projects: ProjectSummary[]; mode: string; disabled?: boolean; activity?: "command" | "answers"; error?: string;
   onMode: (mode: string) => void; onClearError: () => void; onCreate: () => void; onOpen: (id: string) => void;
   onRename: (title: string) => void; onDelete: () => void; onAdd: () => void; onSubmit: (message: string) => void;
   onDropPaths: (paths: string[]) => void;
@@ -39,7 +39,7 @@ export function Workspace(props: Props) {
   const inspectorVisible = compact ? sheet === "inspector" : rightOpen;
 
   const rail = (hidden = false) => <div className={`panel-content ${hidden ? "panel-content-hidden" : ""}`} aria-hidden={hidden || undefined}><ProjectRail active={props.project} projects={props.projects} disabled={props.disabled || hidden} onClose={compact ? () => setSheet(null) : () => { leftRef.current?.collapse(); setLeftOpen(false); }} onCreate={props.onCreate} onOpen={(id) => { props.onOpen(id); if (compact) setSheet(null); }} onRename={props.onRename} onDelete={props.onDelete} onOpenFolder={props.onOpenFolder}/></div>;
-  const inspector = (hidden = false) => <div className={`panel-content ${hidden ? "panel-content-hidden" : ""}`} aria-hidden={hidden || undefined}><Inspector project={props.project} mode={props.mode} disabled={props.disabled || hidden} thinking={props.thinking} onClose={compact ? () => setSheet(null) : () => { rightRef.current?.collapse(); setRightOpen(false); }} onMode={props.onMode} onAdd={props.onAdd} onSubmit={props.onSubmit} onQuestions={props.onQuestions} onEnhancements={props.onEnhancements} onApprove={props.onApprove} onCancel={props.onCancel} onResume={props.onResume} onOpenFolder={props.onOpenFolder} onOpenArtifact={props.onOpenArtifact} onVersion={props.onVersion}/></div>;
+  const inspector = (hidden = false) => <div className={`panel-content ${hidden ? "panel-content-hidden" : ""}`} aria-hidden={hidden || undefined}><Inspector project={props.project} mode={props.mode} disabled={props.disabled || hidden} activity={props.activity} onClose={compact ? () => setSheet(null) : () => { rightRef.current?.collapse(); setRightOpen(false); }} onMode={props.onMode} onAdd={props.onAdd} onSubmit={props.onSubmit} onQuestions={props.onQuestions} onEnhancements={props.onEnhancements} onApprove={props.onApprove} onCancel={props.onCancel} onResume={props.onResume} onOpenFolder={props.onOpenFolder} onOpenArtifact={props.onOpenArtifact} onVersion={props.onVersion}/></div>;
 
   function resetLayout() {
     leftRef.current?.resize("18%"); rightRef.current?.resize("28%"); timelineRef.current?.resize("25%");

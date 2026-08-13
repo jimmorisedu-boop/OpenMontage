@@ -14,24 +14,24 @@ type Actions = {
   createVersion: () => void;
 };
 
-export function Conversation({ project, actions, disabled, thinking }: { project: ProjectState; actions: Actions; disabled?: boolean; thinking?: boolean }) {
+export function Conversation({ project, actions, disabled, activity }: { project: ProjectState; actions: Actions; disabled?: boolean; activity?: "command" | "answers" }) {
   const endRef = useRef<HTMLDivElement>(null);
   const entries = project.conversation || [];
   const currentOperation = useMemo(() => (project.operations || []).slice().reverse().find((item) => ["queued", "running", "cancelling", "cancelled", "failed"].includes(item.status)), [project.operations]);
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" });
-  }, [entries.length, currentOperation?.status, thinking]);
+  }, [entries.length, currentOperation?.status, activity]);
   return <div className="conversation" aria-live="polite" aria-busy={disabled}>
     {currentOperation && <OperationCard operation={currentOperation} onCancel={actions.cancelOperation} onResume={actions.resumeOperation}/>}
     {!entries.length && <WelcomeCard/>}
     {entries.map((entry, index) => <ConversationEntryView key={entry.entry_id || index} entry={entry} actions={actions}/>) }
-    {thinking && <ThinkingCard/>}
+    {activity && <ThinkingCard activity={activity}/>}
     <div ref={endRef}/>
   </div>;
 }
 
-function ThinkingCard() {
-  return <motion.div className="thinking-card" role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}><LoaderCircle className="spin"/><div><strong>Анализирую задачу</strong><span>Сопоставляю запрос, материалы и локальные инструменты</span></div></motion.div>;
+function ThinkingCard({ activity }: { activity: "command" | "answers" }) {
+  return <motion.div className="thinking-card" role="status" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}><LoaderCircle className="spin"/><div><strong>{activity === "answers" ? "Учитываю ответы" : "Анализирую задачу"}</strong><span>{activity === "answers" ? "Уточняю замысел и готовлю следующий шаг" : "Сопоставляю запрос, материалы и локальные инструменты"}</span></div></motion.div>;
 }
 
 function WelcomeCard() {
@@ -39,7 +39,7 @@ function WelcomeCard() {
 }
 
 function ConversationEntryView({ entry, actions }: { entry: ConversationEntry; actions: Actions }) {
-  if (entry.type === "questions" && entry.questions && entry.question_set_id) return <QuestionCard entry={entry} onSubmit={actions.answerQuestions}/>;
+  if (entry.type === "questions" && entry.questions && entry.question_set_id) return <QuestionCard entry={entry} disabled={entry.pending} onSubmit={actions.answerQuestions}/>;
   if (entry.type === "enhancements" && entry.enhancements) return <EnhancementCard entry={entry} onSubmit={actions.setEnhancements}/>;
   if (entry.type === "plan" && entry.plan) return <PlanCard entry={entry} onApprove={actions.approvePlan}/>;
   if (entry.type === "result" && entry.artifact) return <ResultCard artifact={entry.artifact} onOpen={actions.openArtifact} onVersion={actions.createVersion}/>;
@@ -51,14 +51,14 @@ function ConversationEntryView({ entry, actions }: { entry: ConversationEntry; a
   </motion.article>;
 }
 
-function QuestionCard({ entry, onSubmit }: { entry: ConversationEntry; onSubmit: (id: string, answers: Record<string, string>) => void }) {
+function QuestionCard({ entry, disabled, onSubmit }: { entry: ConversationEntry; disabled?: boolean; onSubmit: (id: string, answers: Record<string, string>) => void }) {
   const questions = (entry.questions || []).slice(0, 3);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const ready = questions.every((question) => !question.blocking || Boolean(answers[question.question_id]?.trim()));
   return <section className={`workflow-card question-card ${entry.active === false ? "resolved" : ""}`}>
-    <header className="workflow-title"><div className="card-icon attention"><Lightbulb/></div><div><p className="eyebrow">Нужно уточнить</p><h3>{questions.length === 1 ? "Один короткий вопрос" : `${questions.length} коротких вопроса`}</h3></div>{entry.active === false && <span className="resolved-label"><CheckCircle2/>Отвечено</span>}</header>
+    <header className="workflow-title"><div className="card-icon attention"><Lightbulb/></div><div><p className="eyebrow">Нужно уточнить</p><h3>{questions.length === 1 ? "Один короткий вопрос" : `${questions.length} коротких вопроса`}</h3></div>{entry.active === false && <span className="resolved-label"><CheckCircle2/>{entry.pending ? "Ответы приняты" : "Отвечено"}</span>}</header>
     {questions.map((question, index) => <QuestionField key={question.question_id} question={question} number={index + 1} value={answers[question.question_id] || ""} disabled={entry.active === false} onChange={(value) => setAnswers((state) => ({ ...state, [question.question_id]: value }))}/>)}
-    {entry.active !== false && <button className="button primary full" disabled={!ready} onClick={() => onSubmit(entry.question_set_id!, answers)}>Продолжить<Check/></button>}
+    {entry.active !== false && <button className="button primary full" disabled={disabled || !ready} onClick={() => onSubmit(entry.question_set_id!, answers)}>Продолжить<Check/></button>}
   </section>;
 }
 
